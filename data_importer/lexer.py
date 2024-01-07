@@ -1,42 +1,7 @@
+from .models.token import Token
+from .models.argsme_token import ArgsmeToken
 from abc import ABC, abstractmethod
-import enum
 import sys
-
-class Token:   
-  def __init__(self, token_text, token_kind):
-    self.text = token_text
-    self.kind = token_kind
-
-class TokenType(enum.Enum):
-	EOF = -1
-	NEWLINE = 0
-	NUMBER = 1
-	IDENT = 2
-	STRING = 3
-	# Keywords
-	LABEL = 101
-	GOTO = 102
-	PRINT = 103
-	INPUT = 104
-	LET = 105
-	IF = 106
-	THEN = 107
-	ENDIF = 108
-	WHILE = 109
-	REPEAT = 110
-	ENDWHILE = 111
-	# Operators
-	EQ = 201  
-	PLUS = 202
-	MINUS = 203
-	ASTERISK = 204
-	SLASH = 205
-	EQEQ = 206
-	NOTEQ = 207
-	LT = 208
-	LTEQ = 209
-	GT = 210
-	GTEQ = 211
 
 class LexerStrategy(ABC):
   @abstractmethod
@@ -82,68 +47,67 @@ class Lexer:
       while self.cur_char != '\n':
         self.next_char()
 
-  # Return the next token
-  def get_token(self):
-    self.skip_whitespace()
-    self.skip_comment()
+class ArgsmeLexer(LexerStrategy):
+  def get_token(self, lexer):
+    lexer.skip_whitespace()
+    lexer.skip_comment()
     token = None
 
     # Check the first character of this token to see if we can decide what it is
     # If it is a multiple character operator (e.g., !=), number, identifier, or keyword then we will process the rest
-    if self.cur_char == '+':
-      token = Token(self.cur_char, TokenType.PLUS)
-    elif self.cur_char == '-':
-      token = Token(self.cur_char, TokenType.MINUS)
-    elif self.cur_char == '*':
-      token = Token(self.cur_char, TokenType.ASTERISK)
-    elif self.cur_char == '/':
-      token = Token(self.cur_char, TokenType.SLASH)
-    elif self.cur_char == '=':
+    if lexer.cur_char == '+':
+      token = Token(lexer.cur_char, ArgsmeToken.PLUS)
+    elif lexer.cur_char == '-':
+      token = Token(lexer.cur_char, ArgsmeToken.MINUS)
+    elif lexer.cur_char == '*':
+      token = Token(lexer.cur_char, ArgsmeToken.ASTERISK)
+    elif lexer.cur_char == '/':
+      token = Token(lexer.cur_char, ArgsmeToken.SLASH)
+    elif lexer.cur_char == '=':
       # Check whether this token is = or ==
-      if self.peek() == '=':
-        last_char = self.cur_char
-        self.next_char()
-        token = Token(last_char + self.cur_char, TokenType.EQEQ)
+      if lexer.peek() == '=':
+        last_char = lexer.cur_char
+        lexer.next_char()
+        token = Token(last_char + lexer.cur_char, ArgsmeToken.EQEQ)
       else:
-        token = Token(self.cur_char, TokenType.EQ)
-    elif self.cur_char == '>':
+        token = Token(lexer.cur_char, ArgsmeToken.EQ)
+    elif lexer.cur_char == '>':
       # Check whether this is token is > or >=
-      if self.peek() == '=':
-        last_char = self.cur_char
-        self.next_char()
-        token = Token(last_char + self.cur_char, TokenType.GTEQ)
+      if lexer.peek() == '=':
+        last_char = lexer.cur_char
+        lexer.next_char()
+        token = Token(last_char + lexer.cur_char, ArgsmeToken.GTEQ)
       else:
-        token = Token(self.cur_char, TokenType.GT)
-    elif self.cur_char == '<':
+        token = Token(lexer.cur_char, ArgsmeToken.GT)
+    elif lexer.cur_char == '<':
       # Check whether this is token is < or <=
-      if self.peek() == '=':
-        last_char = self.cur_char
-        self.next_char()
-        token = Token(last_char + self.cur_char, TokenType.LTEQ)
+      if lexer.peek() == '=':
+        last_char = lexer.cur_char
+        lexer.next_char()
+        token = Token(last_char + lexer.cur_char, ArgsmeToken.LTEQ)
       else:
-        token = Token(self.cur_char, TokenType.LT)
-    elif self.cur_char == '!':
-      if self.peek() == '=':
-        last_char = self.cur_char
-        self.next_char()
-        token = Token(last_char + self.cur_char, TokenType.NOTEQ)
+        token = Token(lexer.cur_char, ArgsmeToken.LT)
+    elif lexer.cur_char == '!':
+      if lexer.peek() == '=':
+        last_char = lexer.cur_char
+        lexer.next_char()
+        token = Token(last_char + lexer.cur_char, ArgsmeToken.NOTEQ)
       else:
-        self.abort("Expected !=, got !" + self.peek())
-    elif self.cur_char == '\n':
-      token = Token(self.cur_char, TokenType.NEWLINE)
-    elif self.cur_char == '\0':
-      token = Token('', TokenType.EOF)
+        lexer.abort("Expected !=, got !" + lexer.peek())
+    elif lexer.cur_char == '\n':
+      token = Token(lexer.cur_char, ArgsmeToken.NEWLINE)
+    elif lexer.cur_char == '\0':
+      token = Token('', ArgsmeToken.EOF)
     else:
-      self.abort("Unknown token: " + self.cur_char)
+      lexer.abort("Unknown token: " + lexer.cur_char)
       pass
   
-    self.next_char()
+    lexer.next_char()
     return token
-
-class ArgsmeLexer(LexerStrategy):
+  
   def tokenize(self, lexer):
-    token = lexer.get_token()
-    while token.kind != TokenType.EOF:
+    token = self.get_token(lexer)
+    while token.kind != ArgsmeToken.EOF:
       print(token.kind)
-      token = lexer.get_token()
+      token = self.get_token(lexer)
 
