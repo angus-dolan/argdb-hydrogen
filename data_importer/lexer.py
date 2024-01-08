@@ -1,5 +1,5 @@
-from .models.token import Token
 from .models.argsme_token import ArgsmeToken
+from .models.token import Token
 from abc import ABC, abstractmethod
 import sys
 
@@ -11,10 +11,23 @@ class LexerStrategy(ABC):
 class Lexer:
   def __init__(self, source, lexer_strategy: LexerStrategy):
     self._lexer_strategy = lexer_strategy
-    self.source = source + '\n' 
+    self.source = self.preprocess_source(source)
     self.cur_char = ''
     self.cur_pos = -1
     self.next_char()
+
+  def preprocess_source(self, source):
+    in_string = False
+    processed_source = ''
+
+    for char in source:
+      if char == '"' and (len(processed_source) == 0 or processed_source[-1] != '\\'):
+        in_string = not in_string
+      if not in_string and char in [' ', '\t', '\r']:
+        continue
+      processed_source += char
+
+    return processed_source + '\0'
 
   def set_lexer_strategy(self, lexer_strategy: LexerStrategy):
     self._lexer_strategy = lexer_strategy
@@ -28,79 +41,96 @@ class Lexer:
       self.cur_char = '\0' # EOF
     else:
       self.cur_char = self.source[self.cur_pos]
-
-  def peek(self):
-    if self.cur_pos + 1 >= len(self.source):
-      return '\0'
-    return self.source[self.cur_pos+1]
-
-  def abort(self, message):
-    sys.exit("Lexing error: " + message) # Invalid token found
   
   def skip_whitespace(self):
     while self.cur_char == ' ' or self.cur_char == '\t' or self.cur_char == '\r':
       self.next_char()
   
-  def skip_comment(self):
-    if self.cur_char == '#':
-      while self.cur_char != '\n':
-        self.next_char()
-
-  def process_string_literal(self, lexer):
-    lexer.next_char() # Skip the opening quote
-    start_pos = lexer.cur_pos
-
-    while lexer.cur_char != '"' and lexer.cur_char != '\0':
-      lexer.next_char()
-    if lexer.cur_char == '\0':
-      lexer.abort("String literal not terminated")
-
-    string_content = lexer.source[start_pos:lexer.cur_pos]
-    lexer.next_char() # Skip the closing quote
-    return string_content.strip()
+  def peek(self):
+    if self.cur_pos + 1 >= len(self.source):
+      return '\0'
+    return self.source[self.cur_pos+1]
   
+  def lookahead(self, length):
+    end_pos = self.cur_pos + length
+    if end_pos >= len(self.source):
+        return self.source[self.cur_pos:]
+    return self.source[self.cur_pos:end_pos]
+  
+  def abort(self, message):
+    sys.exit("Lexing error: " + message) # Invalid token found
+
 class ArgsmeLexer(LexerStrategy):
+  def __init__(self):
+    self.tokens = []
+
   def get_token(self, lexer):
     lexer.skip_whitespace()
-    lexer.skip_comment()
-
-    token = None
 
     # JSON specific tokens
     if lexer.cur_char == '{':
-      token = Token(lexer.cur_char, ArgsmeToken.CURLY_OPEN)
+      self.tokens.append(Token(lexer.cur_char, ArgsmeToken.CURLY_OPEN))
     elif lexer.cur_char == '}':
-      token = Token(lexer.cur_char, ArgsmeToken.CURLY_CLOSE)
+      self.tokens.append(Token(lexer.cur_char, ArgsmeToken.CURLY_CLOSE))
     elif lexer.cur_char == '[':
-      token = Token(lexer.cur_char, ArgsmeToken.SQUARE_OPEN)
+      self.tokens.append(Token(lexer.cur_char, ArgsmeToken.SQUARE_OPEN))
     elif lexer.cur_char == ']':
-      token = Token(lexer.cur_char, ArgsmeToken.SQUARE_CLOSE)
+      self.tokens.append(Token(lexer.cur_char, ArgsmeToken.SQUARE_CLOSE))
     elif lexer.cur_char == ':':
-      token = Token(lexer.cur_char, ArgsmeToken.COLON)
+      self.tokens.append(Token(lexer.cur_char, ArgsmeToken.COLON))
     elif lexer.cur_char == ',':
-      token = Token(lexer.cur_char, ArgsmeToken.COMMA)
+      self.tokens.append(Token(lexer.cur_char, ArgsmeToken.COMMA))
       
-    # String literals
     elif lexer.cur_char == '"':
-      token = self.process_argsme_keywords(lexer)
+      self.process_argsme_keywords(lexer)
+
+    # EOF and unknown tokens
     elif lexer.cur_char == '\0':
-      token = Token('', ArgsmeToken.EOF)
+      self.tokens.append(Token('', ArgsmeToken.EOF))
     else:
       lexer.abort(f"Unknown token: {lexer.cur_char}")
 
     lexer.next_char()
-    return token
-  
+
   def process_argsme_keywords(self, lexer):
-    string_content = lexer.process_string_literal(lexer)
-    if string_content == 'premises':
-      return Token(string_content, ArgsmeToken.PREMISES)
-    else:
-      return Token(string_content, ArgsmeToken.STRING)
+      string_content = self.argsme_lookahead(lexer)
+
+      if string_content == "premises":
+        self.tokens.append(Token(string_content, ArgsmeToken.PREMISES))
+      elif string_content == "text":
+        lexer.next_char()
+        text_token = self.argsme_lookahead(lexer)
+        self.tokens.append(Token(text_token, ArgsmeToken.PREMISES_TEXT))
+      elif string_content == "stance":
+        lexer.next_char()
+        text_token = self.argsme_lookahead(lexer)
+        self.tokens.append(Token(text_token, ArgsmeToken.PREMISES_STANCE))
+      else:
+        self.tokens.append(Token(string_content, ArgsmeToken.STRING))
+  
+  def argsme_lookahead(self, lexer):
+    while lexer.cur_char != '"' and lexer.cur_char != '\0':
+      if lexer.cur_char == ':':
+        self.tokens.append(Token(lexer.cur_char, ArgsmeToken.COLON))
+      lexer.next_char()
+
+    lexer.next_char() # Skip the opening quote
+    string_content = ''
+
+    # Collect characters until the closing quotation mark or end of file
+    while lexer.cur_char != '"' and lexer.cur_char != '\0':
+      string_content += lexer.cur_char
+      lexer.next_char()
+      if lexer.cur_char == '\0':
+        lexer.abort("String literal not terminated")
+
+    return string_content.strip()
   
   def tokenize(self, lexer):
-    token = self.get_token(lexer)
-    while token.kind != ArgsmeToken.EOF:
+    print(lexer.source)
+    self.get_token(lexer)
+    while self.tokens[-1].kind != ArgsmeToken.EOF:
+      token = self.tokens[-1]
       print(token.kind, ":", token.text)
-      token = self.get_token(lexer)
-
+      self.get_token(lexer)
+    return self.tokens

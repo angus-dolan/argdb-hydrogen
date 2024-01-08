@@ -13,7 +13,7 @@ class ArgsmeToken(enum.Enum):
   SQUARE_CLOSE = 7
   COLON = 8
   COMMA = 9
-  # Debate-specific keywords
+  # Argsme-specific tokens
   PREMISES = 101
   PREMISES_TEXT = 102
   PREMISES_STANCE = 103
