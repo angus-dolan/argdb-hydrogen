@@ -3,9 +3,8 @@ import enum
 class ArgsmeToken(enum.Enum):
   EOF = -1
   NEWLINE = 0
-  NUMBER = 1
-  IDENT = 2
-  STRING = 3
+  UNKNOWN = 1
+  STRING = 2
   # JSON-specific tokens
   CURLY_OPEN = 4
   CURLY_CLOSE = 5
@@ -17,3 +16,12 @@ class ArgsmeToken(enum.Enum):
   PREMISES = 101
   PREMISES_TEXT = 102
   PREMISES_STANCE = 103
+  CTX = 104
+  CTX_ID = 105
+  CTX_PREV_ID = 106
+  CTX_ACQ_TIME = 107
+  CTX_TITLE = 108
+  CTX_URL = 109
+  CTX_NEXT_ID = 110
+  ID = 111
+  CONCLUSION = 112
