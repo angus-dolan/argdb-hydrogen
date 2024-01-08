@@ -11,9 +11,9 @@ class LexerStrategy(ABC):
 class Lexer:
   def __init__(self, source, lexer_strategy: LexerStrategy):
     self._lexer_strategy = lexer_strategy
-    self.source = source + '\n' # Source code to lex as a string. Append a newline to simplify lexing/parsing the last token/statement
-    self.cur_char = '' # Current character in the string
-    self.cur_pos = -1 # Current position in the string
+    self.source = source + '\n' 
+    self.cur_char = ''
+    self.cur_pos = -1
     self.next_char()
 
   def set_lexer_strategy(self, lexer_strategy: LexerStrategy):
@@ -29,7 +29,6 @@ class Lexer:
     else:
       self.cur_char = self.source[self.cur_pos]
 
-  # Return the lookahead character
   def peek(self):
     if self.cur_pos + 1 >= len(self.source):
       return '\0'
@@ -47,67 +46,61 @@ class Lexer:
       while self.cur_char != '\n':
         self.next_char()
 
+  def process_string_literal(self, lexer):
+    lexer.next_char() # Skip the opening quote
+    start_pos = lexer.cur_pos
+
+    while lexer.cur_char != '"' and lexer.cur_char != '\0':
+      lexer.next_char()
+    if lexer.cur_char == '\0':
+      lexer.abort("String literal not terminated")
+
+    string_content = lexer.source[start_pos:lexer.cur_pos]
+    lexer.next_char() # Skip the closing quote
+    return string_content.strip()
+  
 class ArgsmeLexer(LexerStrategy):
   def get_token(self, lexer):
     lexer.skip_whitespace()
     lexer.skip_comment()
+
     token = None
 
-    # Check the first character of this token to see if we can decide what it is
-    # If it is a multiple character operator (e.g., !=), number, identifier, or keyword then we will process the rest
-    if lexer.cur_char == '+':
-      token = Token(lexer.cur_char, ArgsmeToken.PLUS)
-    elif lexer.cur_char == '-':
-      token = Token(lexer.cur_char, ArgsmeToken.MINUS)
-    elif lexer.cur_char == '*':
-      token = Token(lexer.cur_char, ArgsmeToken.ASTERISK)
-    elif lexer.cur_char == '/':
-      token = Token(lexer.cur_char, ArgsmeToken.SLASH)
-    elif lexer.cur_char == '=':
-      # Check whether this token is = or ==
-      if lexer.peek() == '=':
-        last_char = lexer.cur_char
-        lexer.next_char()
-        token = Token(last_char + lexer.cur_char, ArgsmeToken.EQEQ)
-      else:
-        token = Token(lexer.cur_char, ArgsmeToken.EQ)
-    elif lexer.cur_char == '>':
-      # Check whether this is token is > or >=
-      if lexer.peek() == '=':
-        last_char = lexer.cur_char
-        lexer.next_char()
-        token = Token(last_char + lexer.cur_char, ArgsmeToken.GTEQ)
-      else:
-        token = Token(lexer.cur_char, ArgsmeToken.GT)
-    elif lexer.cur_char == '<':
-      # Check whether this is token is < or <=
-      if lexer.peek() == '=':
-        last_char = lexer.cur_char
-        lexer.next_char()
-        token = Token(last_char + lexer.cur_char, ArgsmeToken.LTEQ)
-      else:
-        token = Token(lexer.cur_char, ArgsmeToken.LT)
-    elif lexer.cur_char == '!':
-      if lexer.peek() == '=':
-        last_char = lexer.cur_char
-        lexer.next_char()
-        token = Token(last_char + lexer.cur_char, ArgsmeToken.NOTEQ)
-      else:
-        lexer.abort("Expected !=, got !" + lexer.peek())
-    elif lexer.cur_char == '\n':
-      token = Token(lexer.cur_char, ArgsmeToken.NEWLINE)
+    # JSON specific tokens
+    if lexer.cur_char == '{':
+      token = Token(lexer.cur_char, ArgsmeToken.CURLY_OPEN)
+    elif lexer.cur_char == '}':
+      token = Token(lexer.cur_char, ArgsmeToken.CURLY_CLOSE)
+    elif lexer.cur_char == '[':
+      token = Token(lexer.cur_char, ArgsmeToken.SQUARE_OPEN)
+    elif lexer.cur_char == ']':
+      token = Token(lexer.cur_char, ArgsmeToken.SQUARE_CLOSE)
+    elif lexer.cur_char == ':':
+      token = Token(lexer.cur_char, ArgsmeToken.COLON)
+    elif lexer.cur_char == ',':
+      token = Token(lexer.cur_char, ArgsmeToken.COMMA)
+      
+    # String literals
+    elif lexer.cur_char == '"':
+      token = self.process_argsme_keywords(lexer)
     elif lexer.cur_char == '\0':
       token = Token('', ArgsmeToken.EOF)
     else:
-      lexer.abort("Unknown token: " + lexer.cur_char)
-      pass
-  
+      lexer.abort(f"Unknown token: {lexer.cur_char}")
+
     lexer.next_char()
     return token
+  
+  def process_argsme_keywords(self, lexer):
+    string_content = lexer.process_string_literal(lexer)
+    if string_content == 'premises':
+      return Token(string_content, ArgsmeToken.PREMISES)
+    else:
+      return Token(string_content, ArgsmeToken.STRING)
   
   def tokenize(self, lexer):
     token = self.get_token(lexer)
     while token.kind != ArgsmeToken.EOF:
-      print(token.kind)
+      print(token.kind, ":", token.text)
       token = self.get_token(lexer)
 

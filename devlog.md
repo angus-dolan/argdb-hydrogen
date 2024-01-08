@@ -30,5 +30,18 @@ Sadface Argument Builder:
 Validator:
   - Not sure if needed, won't do any work on it until rest of code is built out
 
-## Sat 6th June 2024
+## Sun 7th June 2024
 Focus: lexer
+Built out the lexer based on a basic compiler design.
+
+## Mon 8th June 2024
+Focus: 
+  - finishing compiler
+  - Parser algorithms
+    - LL Parser, LR Parser, SLR (Simple LR) Parser, LALR (Look-Ahead) Parser, Recursive Descent Parser, Predictive Parser, Early Parser, Packrat Parsing, CYK (Cocke-Younger-Kasami) Algorithm
+
+Lexer design: Finite State Machines:
+  - Finite Automata
+  - We'll need a FA with output
+  - Two options considered were a **Moore Machine** or a **Mealy Machine**
+  - After looking at boilerplate code I realised I was already building a Moore Machine
