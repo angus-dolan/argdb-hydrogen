@@ -10,6 +10,7 @@ class LexerStrategy(ABC):
 
 class Lexer:
   def __init__(self, source, lexer_strategy: LexerStrategy):
+    self.tokens = []
     self._lexer_strategy = lexer_strategy
     self.source = self.preprocess_source(source)
     self.cur_char = ''
@@ -45,123 +46,93 @@ class Lexer:
   def skip_whitespace(self):
     while self.cur_char == ' ' or self.cur_char == '\t' or self.cur_char == '\r':
       self.next_char()
+
+  def string_lookahead(self, lexer):
+    lexer.next_char()
+    string_value = ''
+    while lexer.cur_char != '"':
+      if lexer.cur_char == '\0': # EOF check
+        lexer.abort('String not terminated properly')
+      string_value += lexer.cur_char
+      lexer.next_char()
+    lexer.next_char()
+    return string_value
   
   def abort(self, message):
-    sys.exit("Lexing error: " + message) # Invalid token found
+    sys.exit('Lexing error: ' + message)
 
 class ArgsmeLexer(LexerStrategy):
   def __init__(self):
-    self.tokens = []
-    self.token_map = {
-      # JSON-specific tokens
-      '{': ArgsmeToken.CURLY_OPEN,
-      '}': ArgsmeToken.CURLY_CLOSE,
-      '[': ArgsmeToken.SQUARE_OPEN,
-      ']': ArgsmeToken.SQUARE_CLOSE,
-      ':': ArgsmeToken.COLON,
-      ',': ArgsmeToken.COMMA,
-      # Argsme-specific tokens
+    self.keywords_map = {
       'premises': ArgsmeToken.PREMISES,
       'text': ArgsmeToken.PREMISES_TEXT,
       'stance': ArgsmeToken.PREMISES_STANCE,
       'context': ArgsmeToken.CTX,
-      'sourceId': ArgsmeToken.CTX_ID,
+      'sourceId': ArgsmeToken.CTX_SRC_ID,
       'previousArgumentInSourceId': ArgsmeToken.CTX_PREV_ID,
       'acquisitionTime': ArgsmeToken.CTX_ACQ_TIME,
       'discussionTitle': ArgsmeToken.CTX_TITLE,
-      'sourceTitle': ArgsmeToken.CTX_URL,
-      'sourceUrl': ArgsmeToken.CTX_NEXT_ID,
+      'sourceTitle': ArgsmeToken.CTX_SRC_TITLE,
+      'sourceUrl': ArgsmeToken.CTX_SRC_URL,
+      'nextArgumentInSourceId': ArgsmeToken.CTX_NEXT_ID,
       'id': ArgsmeToken.ID,
       'conclusion': ArgsmeToken.CONCLUSION,
     }
-    self.standalone_map = {
+    self.standalone_keywords = {
       'premises',
       'context'
     }
-  def next_token(self, lexer):
+    
+  def extract_tokens(self, lexer):
     lexer.skip_whitespace()
 
-    if lexer.cur_char in ['{', '}', '[', ']', ':', ',']:
-      return self.handle_json(lexer)
-    elif lexer.cur_char == '"':
-      return self.handle_keyword(lexer)
-    elif lexer.cur_char == '\0':
-      return Token('', ArgsmeToken.EOF)
-    else:
-      lexer.abort(f"Unknown token: {lexer.cur_char}")
-
-  def handle_json(self, lexer):
-    token = Token(lexer.cur_char, self.get_json_type(lexer.cur_char))
+    if lexer.cur_char == '\0':
+      return lexer.tokens.append(Token('', ArgsmeToken.EOF))
+    
+    if lexer.cur_char == '"':
+      token = self.handle_keyword(lexer)
+      if token.type != ArgsmeToken.UNKNOWN:
+        return lexer.tokens.append(token)
+    
     lexer.next_char()
-    return token
 
   def handle_keyword(self, lexer):
-    lexer.next_char()  # Skip the opening quote
-    keyword = ''
+    keyword = lexer.string_lookahead(lexer)
 
-    while lexer.cur_char != '"' and lexer.cur_char != '\0':
-        keyword += lexer.cur_char
-        lexer.next_char()
-        if lexer.cur_char == '\0':
-            lexer.abort("Keyword not terminated")
+    if self.standalone_keyword(keyword):
+      return Token(keyword, self.keywords_map[keyword])
 
-    lexer.next_char()  # Skip the closing quote of the value
-    print(keyword)
-    # if keyword in self.standalone_map:
-    #     return Token(keyword, self.token_map[keyword])
-    # elif keyword in self.token_map:
-    #     value = self.get_keyword_value(lexer)
-    #     print(value)
-    #     return Token('', ArgsmeToken.STRING)
-    #     # return Token(value, self.token_map[keyword])
-    # else:
+    elif self.keyword_with_value(keyword):
+      return Token(self.keyword_value(lexer), self.keywords_map[keyword])
     
-    return Token('', ArgsmeToken.STRING)
+    return Token(keyword, ArgsmeToken.UNKNOWN)
   
-  def get_keyword_value(self, lexer):
-    lexer.next_char()  # Skip the opening quote of the value
-    value = ''
+  def standalone_keyword(self, keyword):
+    return keyword in self.standalone_keywords
+
+  def keyword_with_value(self, keyword):
+    return keyword in self.keywords_map
+  
+  def keyword_value(self, lexer):
+    keyword_value = ''
 
     while lexer.cur_char != '"' and lexer.cur_char != '\0':
-        value += lexer.cur_char
-        lexer.next_char()
-        if lexer.cur_char == '\0':
-            lexer.abort("Value not terminated")
-
-    lexer.next_char()  # Skip the closing quote of the value
-    return value
-  
-  def get_json_type(self, char):
-     return {
-        '{': ArgsmeToken.CURLY_OPEN,
-        '}': ArgsmeToken.CURLY_CLOSE,
-        '[': ArgsmeToken.SQUARE_OPEN,
-        ']': ArgsmeToken.SQUARE_CLOSE,
-        ':': ArgsmeToken.COLON,
-        ',': ArgsmeToken.COMMA,
-    }.get(char, ArgsmeToken.UNKNOWN)
-  
-  def keyword_lookahead(self, lexer):
-    while lexer.cur_char != '"' and lexer.cur_char != '\0':
-      if lexer.cur_char == ':':
-        self.tokens.append(Token(lexer.cur_char, ArgsmeToken.COLON))
       lexer.next_char()
-
     lexer.next_char() # Skip the opening quote
-    string_content = ''
 
     while lexer.cur_char != '"' and lexer.cur_char != '\0':
-      string_content += lexer.cur_char
+      keyword_value += lexer.cur_char
       lexer.next_char()
       if lexer.cur_char == '\0':
-        lexer.abort("String literal not terminated")
+        lexer.abort('String literal not terminated')
 
-    return string_content.strip()
+    lexer.next_char()
+    return keyword_value.strip()
   
   def tokenize(self, lexer):
-    print(lexer.source)
-    token = self.next_token(lexer)
-    while token.kind != ArgsmeToken.EOF:
-      print(token.kind, ":", token.text)
-      token = self.next_token(lexer)
-    return self.tokens
+    while True:
+      self.extract_tokens(lexer)
+      if lexer.tokens and lexer.tokens[-1].type == ArgsmeToken.EOF:
+        break
+
+    return lexer.tokens
