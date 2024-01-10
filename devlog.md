@@ -1,4 +1,4 @@
-## Sat 6th June 2024
+## Sat 6th Jan 2024
 
 #### sadface_translator
 
@@ -30,11 +30,11 @@ Sadface Argument Builder:
 Validator:
   - Not sure if needed, won't do any work on it until rest of code is built out
 
-## Sun 7th June 2024
+## Sun 7th Jan 2024
 Focus: lexer
 Built out the lexer based on a basic compiler design.
 
-## Mon 8th June 2024
+## Mon 8th Jan 2024
 Focus: 
   - finishing compiler
   - Parser algorithms
@@ -45,3 +45,8 @@ Lexer design: Finite State Machines:
   - We'll need a FA with output
   - Two options considered were a **Moore Machine** or a **Mealy Machine**
   - After looking at boilerplate code I realised I was already building a Moore Machine
+
+## Tue 9th Jan 2024
+Focus: Finished argsme lexer prototype
+Ended up removing json lexical analysis code as it isnt the focus for the lexer, I just want to extract the argsme keywords and data.
+Was going to do a valid parenthesis inspired validator but chose to leave that for the parser or emitter.
