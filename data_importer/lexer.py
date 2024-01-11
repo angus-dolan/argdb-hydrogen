@@ -1,5 +1,6 @@
 from .models.argsme_token import ArgsmeToken
 from .models.token import Token
+from collections import deque
 from abc import ABC, abstractmethod
 import sys
 
@@ -9,8 +10,8 @@ class LexerStrategy(ABC):
     pass
 
 class Lexer:
-  def __init__(self, source, lexer_strategy: LexerStrategy):
-    self.tokens = []
+  def __init__(self, lexer_strategy: LexerStrategy, source):
+    self.tokens = deque()
     self._lexer_strategy = lexer_strategy
     self.source = self.preprocess_source(source)
     self.cur_char = ''

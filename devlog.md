@@ -50,3 +50,7 @@ Lexer design: Finite State Machines:
 Focus: Finished argsme lexer prototype
 Ended up removing json lexical analysis code as it isnt the focus for the lexer, I just want to extract the argsme keywords and data.
 Was going to do a valid parenthesis inspired validator but chose to leave that for the parser or emitter.
+
+## Thu 11th Jan 2024
+Focus: Parser
+- Instead of storing tokens as a list in lexer, swapped to a deque. Popping a list had O(N) complexity, popleft on a deque has O(1)
