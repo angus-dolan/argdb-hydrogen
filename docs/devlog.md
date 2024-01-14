@@ -54,3 +54,7 @@ Was going to do a valid parenthesis inspired validator but chose to leave that f
 ## Thu 11th Jan 2024
 Focus: Parser
 - Instead of storing tokens as a list in lexer, swapped to a deque. Popping a list had O(N) complexity, popleft on a deque has O(1)
+- It seems the argsme json data is corrupt, ID's seem to point no where
+- On further inspection, sourceId was the wrong thing to look at. I think that just provides a way to find where things were scraped from.
+- I managed to extract a group of 9 chained arguments from the dataset using nextArgumentid
+- I might need to use sourceId to build sadface document tree

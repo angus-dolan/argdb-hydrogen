@@ -47,11 +47,6 @@ class Parser:
     else:
       self.peek_token = Token('', ArgsmeToken.EOF)
 
-  # Advances the current token
-  # def next_token(self):
-  #   self.cur_token = self.peek_token
-  #   self.peek_token = self.lexer.tokens.pop(0)
-
   def abort(self, message):
     sys.exit("Error. " + message)
 

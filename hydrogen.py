@@ -1,4 +1,4 @@
-from data_importer.main import DataImporter
+from importer.main import DataImporter
 
 if __name__ == "__main__":
   importer = DataImporter()
