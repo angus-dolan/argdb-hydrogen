@@ -1,3 +1,6 @@
+# ArgDB configuration file
+*.cfg
+
 # SQLite
 *.sqlite3
 
