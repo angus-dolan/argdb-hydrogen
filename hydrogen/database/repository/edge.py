@@ -1,0 +1,6 @@
+schema = '''
+
+'''
+
+class Edge:
+  pass
