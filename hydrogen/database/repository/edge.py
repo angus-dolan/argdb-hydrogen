@@ -1,6 +1,0 @@
-schema = '''
-
-'''
-
-class Edge:
-  pass
