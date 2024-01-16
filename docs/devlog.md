@@ -58,3 +58,15 @@ Focus: Parser
 - On further inspection, sourceId was the wrong thing to look at. I think that just provides a way to find where things were scraped from.
 - I managed to extract a group of 9 chained arguments from the dataset using nextArgumentid
 - I might need to use sourceId to build sadface document tree
+
+### Sun 14th Jan
+Focus: config system
+- Refactored folder structure a bit.
+- Implimented a config file system based off Simon's ArgDB.
+- Originally used the config system to create a config file AND initialise database.
+- Realised the database initialization would work better in the actual database layer.
+
+### Tue 16th Jan
+Focus: Data layer
+- Implimented boilerplate database layer loosely following the repository pattern.
+- Deciced to use sqlalchemy for data modelling.
