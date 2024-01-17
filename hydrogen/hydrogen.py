@@ -1,6 +1,4 @@
-from database.database import Database, db
-from database.models import Document
-
+from database import Database, db, Document
 from config import Config
 from data_importer import DataImporter
 
@@ -14,5 +12,5 @@ if __name__ == "__main__":
   document1 = Document()
   db.document.add(document1)
 
-  # importer = DataImporter()
-  # importer.import_file()
+  importer = DataImporter()
+  importer.import_file()
