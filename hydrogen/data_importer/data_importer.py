@@ -4,10 +4,11 @@ from .emitter import *
 
 class DataImporter:
   def import_file(self):
-    source = '{ "premises": [{"text": "Hello World! this is my premise...","stance": "CON"}],"context": {"sourceId": "70a50579-2019-04-18T19:55:39Z","previousArgumentInSourceId": "70a50579-2019-04-18T19:55:39Z-00003-000","acquisitionTime": "2019-04-18T19:55:39Z","discussionTitle": "Is music piracy a bad thing?","sourceTitle": "Debate Argument: Music Piracy in the USA | Debate.org","sourceUrl": "https://www.debate.org/debates/","nextArgumentInSourceId": "70a50579-2019-04-18T19:55:39Z-00005-000"}, "id": "70a50579-2019-04-18T19:55:39Z-00004-000", "conclusion": "Music piracy is a bad thing."}'
-    
+    source_0 = '{"premises": [{"text": "Argument 00000","stance": "CON"},],"context": {"sourceId": "759e7c52-2019-04-18T14:37:21Z","previousArgumentInSourceId": "","acquisitionTime": "2019-04-18T14:37:21Z","discussionTitle": "Individual human rights and liberties should transcend or out-rank the rights given to corporations.","sourceTitle": "Online Debate: Individual human rights and liberties should transcend or out-rank the rights given to corporations. | Debate.org","sourceUrl": "https://www.debate.org/debates/Individual-human-rights-and-liberties-should-transcend-or-out-rank-the-rights-given-to-corporations./1/","nextArgumentInSourceId": "759e7c52-2019-04-18T14:37:21Z-00001-000"},"id": "759e7c52-2019-04-18T14:37:21Z-00000-000","conclusion": "Individual human rights and liberties should transcend or out-rank the rights given to corporations."},'
+    source_1 = '{"premises": [{"text": "Argument 00001","stance": "PRO"}],"context": {"sourceId": "759e7c52-2019-04-18T14:37:21Z","previousArgumentInSourceId": "759e7c52-2019-04-18T14:37:21Z-00000-000","acquisitionTime": "2019-04-18T14:37:21Z","discussionTitle": "Individual human rights and liberties should transcend or out-rank the rights given to corporations.","sourceTitle": "Online Debate: Individual human rights and liberties should transcend or out-rank the rights given to corporations. | Debate.org","sourceUrl": "https://www.debate.org/debates/Individual-human-rights-and-liberties-should-transcend-or-out-rank-the-rights-given-to-corporations./1/","nextArgumentInSourceId": "759e7c52-2019-04-18T14:37:21Z-00002-000"},"id": "759e7c52-2019-04-18T14:37:21Z-00001-000","conclusion": "Individual human rights and liberties should transcend or out-rank the rights given to corporations."},'
+
     argsme_lexer = ArgsmeLexer()
-    lexer = Lexer(argsme_lexer, source)
+    lexer = Lexer(argsme_lexer, source_0)
     lexer.tokenize_source()
 
     argsme_parser = ArgsmeParser()

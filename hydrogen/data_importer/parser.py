@@ -4,6 +4,9 @@ from .sadface_builder import SadfaceBuilder
 from .lexer import Lexer
 from abc import ABC, abstractmethod
 import sys
+import uuid
+import hashlib
+
 
 class ParserStrategy(ABC):
   @abstractmethod
@@ -44,6 +47,12 @@ class Parser:
 class ArgsmeParser(ParserStrategy):
   def __init__ (self):
     self.builder = SadfaceBuilder()
+    self.id = ""
+    self.previous_id = ""
+    self.created = ""
+    self.edited = ""
+    self.title = ""
+    self.conclusion = ""
     
   def match(self, parser: Parser):
     type = parser.cur_token.type
@@ -54,33 +63,53 @@ class ArgsmeParser(ParserStrategy):
     if parser.cur_token.type != type:
       parser.abort(f"Expected {type.name}, got {parser.cur_token.type.name}")
 
+    # print(f"Matched {parser.cur_token.type.name} with value {parser.cur_token.value}")
     self.handle_token(parser.cur_token.type, parser.cur_token.value)
     parser.next_token()
 
   def handle_token(self, token_type, token_value):
-    # Core metadata
     if token_type == ArgsmeToken.CTX_ACQ_TIME:
-      self.builder.with_metadata_core("created", token_value)
-      self.builder.with_metadata_core("edited", token_value)
+      self.created = token_value
+      self.edited = token_value
     elif token_type == ArgsmeToken.ID:
-      self.builder.with_metadata_core("id", token_value)
-    # Other metadata
+      self.id = self.convert_to_uuid(token_value)
+    elif token_type == ArgsmeToken.CTX_PREV_ID:
+      self.previous_id = self.convert_to_uuid(token_value)
     if token_type == ArgsmeToken.CTX_SRC_TITLE:
-      self.builder.with_metadata_other("argsme", "title", token_value)
-    elif token_type == ArgsmeToken.PREMISES_TEXT:
-      self.builder.with_metadata_other("argsme", "premise", token_value)
-    elif token_type == ArgsmeToken.PREMISES_STANCE:
-      self.builder.with_metadata_other("argsme", "premise_stance", token_value)
+      self.title = token_value
     elif token_type == ArgsmeToken.CONCLUSION:
-      self.builder.with_metadata_other("argsme", "conclusion", token_value)
-    # Node 
-    # Edge
+      self.conclusion = token_value
+
+  def convert_to_uuid(self, s):
+    hashed = hashlib.sha1(s.encode()).hexdigest()
+    shortened = hashed[:32]
+    return str(uuid.UUID(shortened))
+  
+  def build_new_document(self):
+    pass
 
   def parse(self, parser: Parser):
     self.builder.default_metadata_core()
 
     while not parser.check_token(ArgsmeToken.EOF):
       self.match(parser)
+      
+    if self.previous_id is "":
+      # TODO: Call self.build_new_document()
+      pass
+    else:
+      # TODO: Retrieve existing document
+      # TODO: Add edge
+      pass
+      
+    # We should still always have to add a node
+    # regardless of if we're creating or updating
+    self.builder.with_node({
+      "id": self.id,
+      "text": "",
+      "type": "atom",
+      "metadata": {}
+    })
     
     sadface_document = (
       self.builder
@@ -89,6 +118,6 @@ class ArgsmeParser(ParserStrategy):
 
     print(self.builder.validate())
     print(sadface_document)
-    
+
     # Call emitter
     # ...
