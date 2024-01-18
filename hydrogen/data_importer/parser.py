@@ -1,6 +1,6 @@
 from .models.argsme_token import ArgsmeToken
 from .models.token import Token
-from collections import deque
+from .sadface_builder import SadfaceBuilder
 from .lexer import Lexer
 from abc import ABC, abstractmethod
 import sys
@@ -25,21 +25,12 @@ class Parser:
   def parse_tokens(self):
     return self._parser_strategy.parse(self)
   
-  # Return true if the current token matches
   def check_token(self, type):
     return type == self.cur_token.type
 
-  # Return true if the next token matches
   def check_peek(self, type):
     return type == self.peek_token.type
 
-  # Try to match current token. If not, error. Advances the current token
-  def match(self, type):
-    if not self.check_token(type):
-      self.abort("Expected " + type.name + ", got " + self.cur_token.type.name)
-    self.next_token()
-  
-  # Advances the current token
   def next_token(self):
     self.cur_token = self.peek_token
     if self.lexer.tokens:
@@ -51,8 +42,53 @@ class Parser:
     sys.exit("Error. " + message)
 
 class ArgsmeParser(ParserStrategy):
-  def parse(self, parser):
-    print("Parsing...")
+  def __init__ (self):
+    self.builder = SadfaceBuilder()
+    
+  def match(self, parser: Parser):
+    type = parser.cur_token.type
+
+    if type.name not in ArgsmeToken.__members__:
+      parser.abort(f"Token type '{type}' is not a valid ArgsmeToken")
+
+    if parser.cur_token.type != type:
+      parser.abort(f"Expected {type.name}, got {parser.cur_token.type.name}")
+
+    self.handle_token(parser.cur_token.type, parser.cur_token.value)
+    parser.next_token()
+
+  def handle_token(self, token_type, token_value):
+    # Core metadata
+    if token_type == ArgsmeToken.CTX_ACQ_TIME:
+      self.builder.with_metadata_core("created", token_value)
+      self.builder.with_metadata_core("edited", token_value)
+    elif token_type == ArgsmeToken.ID:
+      self.builder.with_metadata_core("id", token_value)
+    # Other metadata
+    if token_type == ArgsmeToken.CTX_SRC_TITLE:
+      self.builder.with_metadata_other("argsme", "title", token_value)
+    elif token_type == ArgsmeToken.PREMISES_TEXT:
+      self.builder.with_metadata_other("argsme", "premise", token_value)
+    elif token_type == ArgsmeToken.PREMISES_STANCE:
+      self.builder.with_metadata_other("argsme", "premise_stance", token_value)
+    elif token_type == ArgsmeToken.CONCLUSION:
+      self.builder.with_metadata_other("argsme", "conclusion", token_value)
+    # Node 
+    # Edge
+
+  def parse(self, parser: Parser):
+    self.builder.default_metadata_core()
+
     while not parser.check_token(ArgsmeToken.EOF):
-      print(f"Token: {parser.cur_token.type.name}, Value: {parser.cur_token.value}")
-      parser.next_token()
+      self.match(parser)
+    
+    sadface_document = (
+      self.builder
+      .build()
+    )
+
+    print(self.builder.validate())
+    print(sadface_document)
+    
+    # Call emitter
+    # ...
