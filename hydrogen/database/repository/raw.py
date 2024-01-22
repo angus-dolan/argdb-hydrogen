@@ -1,16 +1,16 @@
 from contextlib import contextmanager
-from database.models import Document
+from database.models import Raw
 
-class DocumentRepository:
+class RawRepository:
   def __init__(self, session):
     self.session = session
 
-  def insert_one(self, document: Document):
+  def insert_one(self, raw: Raw):
     with self.managed_transaction():
-      self.session.add(document)
+      self.session.add(raw)
 
-  def find_by_id(self, document_id):
-    return self.session.query(Document).filter_by(id=document_id).one_or_none()
+  # def find_by_id(self, raw_id):
+  #   return self.session.query(Raw).filter_by(id=raw_id).one_or_none()
 
   @contextmanager
   def managed_transaction(self):

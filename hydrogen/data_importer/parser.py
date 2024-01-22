@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 import sys
 import uuid
 import hashlib
-
+import json
+from database import Database, db, Document, Raw
 
 class ParserStrategy(ABC):
   @abstractmethod
@@ -53,6 +54,8 @@ class ArgsmeParser(ParserStrategy):
     self.edited = ""
     self.title = ""
     self.conclusion = ""
+    self.premise = ""
+    self.stance = ""
     
   def match(self, parser: Parser):
     type = parser.cur_token.type
@@ -63,7 +66,6 @@ class ArgsmeParser(ParserStrategy):
     if parser.cur_token.type != type:
       parser.abort(f"Expected {type.name}, got {parser.cur_token.type.name}")
 
-    # print(f"Matched {parser.cur_token.type.name} with value {parser.cur_token.value}")
     self.handle_token(parser.cur_token.type, parser.cur_token.value)
     parser.next_token()
 
@@ -75,49 +77,70 @@ class ArgsmeParser(ParserStrategy):
       self.id = self.convert_to_uuid(token_value)
     elif token_type == ArgsmeToken.CTX_PREV_ID:
       self.previous_id = self.convert_to_uuid(token_value)
-    if token_type == ArgsmeToken.CTX_SRC_TITLE:
+    elif token_type == ArgsmeToken.CTX_TITLE:
       self.title = token_value
     elif token_type == ArgsmeToken.CONCLUSION:
       self.conclusion = token_value
+    elif token_type == ArgsmeToken.PREMISES_TEXT:
+      self.premise = token_value
+    elif token_type == ArgsmeToken.PREMISES_STANCE:
+      self.stance = token_value
 
-  def convert_to_uuid(self, s):
-    hashed = hashlib.sha1(s.encode()).hexdigest()
+  def convert_to_uuid(self, string):
+    if string == "": return ""
+      
+    hashed = hashlib.sha1(string.encode()).hexdigest()
     shortened = hashed[:32]
     return str(uuid.UUID(shortened))
   
+  def add_node(self):
+    return self.builder.with_node({
+      "id": self.id,
+      "metadata": {
+        "premise": self.premise,
+        "stance": self.stance,
+      },
+      "text": self.conclusion,
+      "type": "atom",
+    })
+  
   def build_new_document(self):
+    self.builder.default_metadata_core()
+    self.builder.with_metadata_core("id", self.id)
+    self.builder.with_metadata_core("created", self.created)
+    self.builder.with_metadata_core("edited", self.edited)
+    self.builder.with_metadata_core("title", self.title)
+
+    self.add_node()
+
+  def update_existing_document(self):
+    print("Updating existing document")
+    # TODO: Retrieve existing document
+    # TODO: Add node
+    # TODO: Add edge
     pass
 
   def parse(self, parser: Parser):
-    self.builder.default_metadata_core()
-
     while not parser.check_token(ArgsmeToken.EOF):
       self.match(parser)
-      
-    if self.previous_id is "":
-      # TODO: Call self.build_new_document()
-      pass
-    else:
-      # TODO: Retrieve existing document
-      # TODO: Add edge
-      pass
-      
-    # We should still always have to add a node
-    # regardless of if we're creating or updating
-    self.builder.with_node({
-      "id": self.id,
-      "text": "",
-      "type": "atom",
-      "metadata": {}
-    })
     
-    sadface_document = (
-      self.builder
-      .build()
-    )
+    if self.previous_id == "":
+      self.build_new_document()
+    else:
+      self.update_existing_document()
+    
+    sadface_document = (self.builder.build())
+    validation_result, error_messages = self.builder.validate()
 
-    print(self.builder.validate())
+    # Validation fails when adding node metadata
+    # "Metadata contains a block that is not a dict/object:None"
+    # TODO: Figure out why this is, monkeypuzzle exports metadata the same way
+
+    # if not validation_result:
+    #   parser.abort(f"Document is invalid: {', '.join(error_messages)}")
+
     print(sadface_document)
 
     # Call emitter
+    db.raw.insert_one(Raw(uuid=self.id, data=json.dumps(sadface_document)))
     # ...

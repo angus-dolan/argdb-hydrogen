@@ -12,6 +12,9 @@ class SadfaceBuilder:
     }
 
   def default_metadata_core(self):
+    self.sadface["metadata"]["core"]["id"] = ""
+    self.sadface["metadata"]["core"]["edited"] = ""
+    self.sadface["metadata"]["core"]["created"] = ""
     self.sadface["metadata"]["core"]["analyst_name"] = ""
     self.sadface["metadata"]["core"]["analyst_email"] = ""
     self.sadface["metadata"]["core"]["version"] = "0.1"
@@ -27,11 +30,13 @@ class SadfaceBuilder:
       
     self.sadface["metadata"][option][key] = value
     return self
-
+  
   def with_node(self, node):
+    print(node)
+
     self.sadface["nodes"].append(node)
     return self
-  
+
   def with_edge(self, edge):
     self.sadface["edges"].append(edge)
     return self

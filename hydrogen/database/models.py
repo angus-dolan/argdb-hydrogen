@@ -1,6 +1,12 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from database.connection import Base
 
+class Raw(Base):
+  __tablename__ = 'raw'
+  id = Column(Integer, primary_key=True)
+  uuid = Column(String)
+  data = Column(String)
+
 class Document(Base):
   __tablename__ = 'document'
   id = Column(Integer, primary_key=True)
