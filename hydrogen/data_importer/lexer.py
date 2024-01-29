@@ -1,5 +1,4 @@
-from .models.argsme_token import ArgsmeToken
-from .models.token import Token
+from models.tokens import Token, ArgsmeToken
 from collections import deque
 from abc import ABC, abstractmethod
 import sys

@@ -70,3 +70,17 @@ Focus: config system
 Focus: Data layer
 - Implimented boilerplate database layer loosely following the repository pattern.
 - Deciced to use sqlalchemy for data modelling.
+
+### Sun 28th Jan
+- Made rough parser but decided to spike out without building a tree
+- Spike used the database repo to store 
+- Hardest thing is retrieving and updating an existing sf doc
+- Also bug was found in sadface metadata validation
+- Originally thinking was to build the sf doc in the parser then pass to emitter to store in db.
+- Now thinking, every parser func should call the emitter incrementally until the sf doc is ready.
+
+### Mon 29th Jan
+- Moved root > data_importer > models into root > models
+- Moved Token and ArgsmeToken into Tokens
+- Created a Sadface class to simplify builder and to use in adapters if needed
+- Introduced DataHandler class to Parser to avoid handle_token becoming an god object if statement mess
