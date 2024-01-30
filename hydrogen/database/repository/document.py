@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from database.models import Document
+from hydrogen.database.schema import Document
 
 class DocumentRepository:
   def __init__(self, session):

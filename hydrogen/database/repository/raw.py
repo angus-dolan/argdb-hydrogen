@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from database.models import Raw
+from hydrogen.database.schema import Raw
 
 class RawRepository:
   def __init__(self, session):
