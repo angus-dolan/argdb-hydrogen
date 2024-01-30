@@ -61,27 +61,32 @@ class DataHandler(ABC):
 class ArgsmeDataHandler(DataHandler):
   def __init__(self):
     self.id = ""
+    self.source_id = ""
     self.previous_id = ""
     self.created = ""
     self.edited = ""
     self.title = ""
     self.conclusion = ""
-    self.premise = ""
+    self.premise_txt = ""
     self.stance = ""
 
     self.token_handlers = {
       ArgsmeToken.CTX_ACQ_TIME: self.handle_acq_time,
+      ArgsmeToken.CTX_SRC_ID: self.handle_src_id,
       ArgsmeToken.ID: self.handle_id,
       ArgsmeToken.CTX_PREV_ID: self.handle_prev_id,
       ArgsmeToken.CTX_TITLE: self.handle_title,
       ArgsmeToken.CONCLUSION: self.handle_conclusion,
-      ArgsmeToken.PREMISES_TEXT: self.handle_premise,
+      ArgsmeToken.PREMISES_TEXT: self.handle_premise_txt,
       ArgsmeToken.PREMISES_STANCE: self.handle_stance,
     }
 
   def handle_acq_time(self, value):
     self.created = value
     self.edited = value
+
+  def handle_src_id(self, value):
+    self.source_id = self.convert_to_uuid(value)
 
   def handle_id(self, value):
     self.id = self.convert_to_uuid(value)
@@ -95,8 +100,8 @@ class ArgsmeDataHandler(DataHandler):
   def handle_conclusion(self, value):
     self.conclusion = value
   
-  def handle_premise(self, value):
-    self.premise = value
+  def handle_premise_txt(self, value):
+    self.premise_txt = value
   
   def handle_stance(self, value):
     self.stance = value
@@ -126,31 +131,37 @@ class ArgsmeParser(ParserStrategy):
     self.data_handler.handle_token(parser)
     parser.next_token()
   
-  def add_node(self):
-    return self.builder.with_node({
+  def get_node(self):
+    return {
       "id": self.data_handler.id,
       "metadata": {
-        "premise": self.data_handler.premise,
         "stance": self.data_handler.stance,
       },
-      "text": self.data_handler.conclusion,
+      "text": self.data_handler.premise_txt,
       "type": "atom",
-    })
+    }
   
+  def get_edge(self):
+    return {
+      "source_id": self.data_handler.previous_id,
+      "target_id": self.data_handler.id
+    }
+
   def build_new_document(self):
-    self.builder.with_metadata_core("id", self.data_handler.id)
+    self.builder.with_metadata_core("id", self.data_handler.source_id)
     self.builder.with_metadata_core("created", self.data_handler.created)
     self.builder.with_metadata_core("edited", self.data_handler.edited)
     self.builder.with_metadata_core("title", self.data_handler.title)
+    self.builder.with_node(self.get_node())
 
-    self.add_node()
+  def update_existing_document(self, parser: Parser):
+    result = db.raw.get(self.data_handler.source_id)
+    if result is None: parser.abort(f"Document with source_id {self.data_handler.source_id} does not exist")
 
-  def update_existing_document(self):
-    print("Updating existing document")
-    # TODO: Retrieve existing document
-    # TODO: Add node
-    # TODO: Add edge
-    pass
+    document = json.loads(result.data)
+    self.builder.with_existing_document(document)
+    self.builder.with_node(self.get_node())
+    self.builder.with_edge(self.get_edge())
 
   def parse(self, parser: Parser):
     while not parser.check_token(ArgsmeToken.EOF):
@@ -159,13 +170,15 @@ class ArgsmeParser(ParserStrategy):
     if self.data_handler.previous_id == "":
       self.build_new_document()
     else:
-      self.update_existing_document()
+      self.update_existing_document(parser)
     
     sadface_document = (self.builder.build())
     validation_result, error_messages = self.builder.validate()
 
     print(sadface_document)
 
+    if self.data_handler.previous_id == "":
+      db.raw.add(Raw(uuid=self.data_handler.source_id, data=json.dumps(sadface_document)))
+    
     # Call emitter
     # ...
-    db.raw.add(Raw(uuid=self.data_handler.id, data=json.dumps(sadface_document)))

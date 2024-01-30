@@ -1,22 +1,25 @@
 import sadface as sf
 
 class Sadface:
-  def __init__(self):
-    self.document = {
-      "metadata": {
-       "core": {
-          "id": "",
-          "created": "",
-          "edited": "",
-          "analyst_name": "",
-          "analyst_email": "",
-          "version": "0.1"
+  def __init__(self, existing_document=None):
+    if existing_document:
+      self.document = existing_document
+    else:
+      self.document = {
+        "metadata": {
+          "core": {
+            "id": "",
+            "created": "",
+            "edited": "",
+            "analyst_name": "",
+            "analyst_email": "",
+            "version": "0.1"
+          },
         },
-      },
-      "nodes": [],
-      "edges": [],
-      "resources": []
-    }
+        "nodes": [],
+        "edges": [],
+        "resources": []
+      }
   
   def __set_metadata(self, option, key, value):
     if option not in self.document["metadata"]:

@@ -1,5 +1,5 @@
 from config import Config
-from database import Database, Raw
+from database import Database
 from data_importer import DataImporter
 
 config = Config()
@@ -11,5 +11,3 @@ if __name__ == "__main__":
 
   importer = DataImporter()
   importer.import_file()
-
-  database.raw.add(Raw(uuid="hello", data="world"))

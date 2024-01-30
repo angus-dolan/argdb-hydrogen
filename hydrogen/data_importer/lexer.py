@@ -101,7 +101,6 @@ class ArgsmeLexer(LexerStrategy):
 
     if self.standalone_keyword(keyword):
       return Token(keyword, self.keywords_map[keyword])
-
     elif self.keyword_with_value(keyword):
       return Token(self.keyword_value(lexer), self.keywords_map[keyword])
     
