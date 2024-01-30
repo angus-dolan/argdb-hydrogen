@@ -90,3 +90,4 @@ Focus: Data layer
 - Moved all database files into single root level database.py
 - Created a BaseRepository for all repos to inherit from
 - Realised using source_id for document_id will work, was needed when updating an existing sadface document
+- Instead of having to use `from database import Database, Raw` I should use an adapter - therefore I won't need to import Raw and can just ping sadface docs directly to repo without having to use Raw model, which could easily change.

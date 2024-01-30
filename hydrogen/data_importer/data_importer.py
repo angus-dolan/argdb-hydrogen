@@ -14,3 +14,6 @@ class DataImporter:
     argsme_parser = ArgsmeParser()
     parser = Parser(argsme_parser, lexer)
     parser.parse_tokens()
+
+    emitter = Emitter(parser.uuid, parser.document)
+    emitter.emit()

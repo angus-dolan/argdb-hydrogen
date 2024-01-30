@@ -87,6 +87,13 @@ class RawRepository(BaseRepository):
   
   def get(self, uuid):
     return self.session.query(self.model).filter_by(uuid=uuid).one_or_none()
+  
+  def update(self, uuid, data):
+    with self.managed_transaction():
+      item = self.get(uuid)
+      if item:
+        item.data = data
+        self.session.add(item)
 
 class Database:
   def __init__(self):

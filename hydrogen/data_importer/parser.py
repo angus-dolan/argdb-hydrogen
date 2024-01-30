@@ -21,6 +21,8 @@ class Parser:
     self.lexer = lexer
     self.cur_token = None
     self.peek_token = None
+    self.uuid = None
+    self.document = None
     self.next_token()
     self.next_token() # Call this twice to initialize current and peek
 
@@ -38,18 +40,17 @@ class Parser:
 
   def next_token(self):
     self.cur_token = self.peek_token
+    self.peek_token = Token('', ArgsmeToken.EOF)
+
     if self.lexer.tokens:
       self.peek_token = self.lexer.tokens.popleft()
-    else:
-      self.peek_token = Token('', ArgsmeToken.EOF)
 
   def abort(self, message):
-    sys.exit("Error. " + message)
+    sys.exit("Error: " + message)
 
 class DataHandler(ABC):
   def convert_to_uuid(self, string):
     if string == "": return ""
-      
     hashed = hashlib.sha1(string.encode()).hexdigest()
     shortened = hashed[:32]
     return str(uuid.UUID(shortened))
@@ -111,8 +112,8 @@ class ArgsmeDataHandler(DataHandler):
     token_value = parser.cur_token.value
     handler = self.token_handlers.get(token_type)
 
-    if handler:
-      handler(token_value)
+    if handler: handler(token_value)
+     
     
 class ArgsmeParser(ParserStrategy):
   def __init__ (self):
@@ -164,6 +165,9 @@ class ArgsmeParser(ParserStrategy):
     self.builder.with_edge(self.get_edge())
 
   def parse(self, parser: Parser):
+    parser.document = None
+    parser.uuid = None
+    
     while not parser.check_token(ArgsmeToken.EOF):
       self.match(parser)
     
@@ -172,13 +176,11 @@ class ArgsmeParser(ParserStrategy):
     else:
       self.update_existing_document(parser)
     
-    sadface_document = (self.builder.build())
-    validation_result, error_messages = self.builder.validate()
+    parsed_document = (self.builder.build())
+    valid, error_messages = self.builder.validate()
 
-    print(sadface_document)
-
-    if self.data_handler.previous_id == "":
-      db.raw.add(Raw(uuid=self.data_handler.source_id, data=json.dumps(sadface_document)))
-    
-    # Call emitter
-    # ...
+    # if valid:
+    parser.document = parsed_document
+    parser.uuid = self.data_handler.source_id
+    # else:
+    #   parser.abort(f"Document is not valid. Errors: {error_messages}")
