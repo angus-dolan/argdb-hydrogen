@@ -1,5 +1,5 @@
-from database import Database, db, Document
 from config import Config
+from database import Database, Raw
 from data_importer import DataImporter
 
 config = Config()
@@ -12,5 +12,4 @@ if __name__ == "__main__":
   importer = DataImporter()
   importer.import_file()
 
-  # document1 = Document()
-  # db.document.add(document1)
+  database.raw.add(Raw(uuid="hello", data="world"))

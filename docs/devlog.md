@@ -84,3 +84,8 @@ Focus: Data layer
 - Moved Token and ArgsmeToken into Tokens
 - Created a Sadface class to simplify builder and to use in adapters if needed
 - Introduced DataHandler class to Parser to avoid handle_token becoming an god object if statement mess
+
+### Tue 30th Jan
+- Had a lot of circular import problems with db somehow
+- Moved all database files into single root level database.py
+- Created a BaseRepository for all repos to inherit from

@@ -1,11 +1,14 @@
 from models.tokens import Token, ArgsmeToken
-from database import Database, db, Document, Raw
 from .sadface_builder import SadfaceBuilder
+from database import Database, Raw
 from .lexer import Lexer
 from abc import ABC, abstractmethod
 import sys
 import uuid
 import hashlib
+import json 
+
+db = Database()
 
 class ParserStrategy(ABC):
   @abstractmethod
@@ -164,5 +167,5 @@ class ArgsmeParser(ParserStrategy):
     print(sadface_document)
 
     # Call emitter
-    # db.raw.insert_one(Raw(uuid=self.id, data=json.dumps(sadface_document)))
     # ...
+    db.raw.add(Raw(uuid=self.data_handler.id, data=json.dumps(sadface_document)))
