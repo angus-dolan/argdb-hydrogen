@@ -1,7 +1,7 @@
 from models.tokens import Token, ArgsmeToken
 from .sadface_builder import SadfaceBuilder
-from database import Database, Raw
 from .lexer import Lexer
+from database import Database
 from abc import ABC, abstractmethod
 import sys
 import uuid

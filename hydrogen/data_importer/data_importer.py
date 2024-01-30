@@ -1,19 +1,36 @@
 from .lexer import *
 from .parser import *
 from .emitter import *
+import pyjq
+import json
+import os
 
 class DataImporter:
   def import_file(self):
-    source_0 = '{"premises": [{"text": "Argument 00000","stance": "CON"},],"context": {"sourceId": "759e7c52-2019-04-18T14:37:21Z","previousArgumentInSourceId": "","acquisitionTime": "2019-04-18T14:37:21Z","discussionTitle": "Individual human rights and liberties should transcend or out-rank the rights given to corporations.","sourceTitle": "Online Debate: Individual human rights and liberties should transcend or out-rank the rights given to corporations. | Debate.org","sourceUrl": "https://www.debate.org/debates/Individual-human-rights-and-liberties-should-transcend-or-out-rank-the-rights-given-to-corporations./1/","nextArgumentInSourceId": "759e7c52-2019-04-18T14:37:21Z-00001-000"},"id": "759e7c52-2019-04-18T14:37:21Z-00000-000","conclusion": "Individual human rights and liberties should transcend or out-rank the rights given to corporations."},'
-    source_1 = '{"premises": [{"text": "Argument 00001","stance": "PRO"}],"context": {"sourceId": "759e7c52-2019-04-18T14:37:21Z","previousArgumentInSourceId": "759e7c52-2019-04-18T14:37:21Z-00000-000","acquisitionTime": "2019-04-18T14:37:21Z","discussionTitle": "Individual human rights and liberties should transcend or out-rank the rights given to corporations.","sourceTitle": "Online Debate: Individual human rights and liberties should transcend or out-rank the rights given to corporations. | Debate.org","sourceUrl": "https://www.debate.org/debates/Individual-human-rights-and-liberties-should-transcend-or-out-rank-the-rights-given-to-corporations./1/","nextArgumentInSourceId": "759e7c52-2019-04-18T14:37:21Z-00002-000"},"id": "759e7c52-2019-04-18T14:37:21Z-00001-000","conclusion": "Individual human rights and liberties should transcend or out-rank the rights given to corporations."},'
+    file_path = './data_importer/example_data/physical_vs_mental.json'
 
-    argsme_lexer = ArgsmeLexer()
-    lexer = Lexer(argsme_lexer, source_1)
-    lexer.tokenize_source()
+    if not os.path.exists(file_path):
+      return print(f"File not found: {file_path}")
 
-    argsme_parser = ArgsmeParser()
-    parser = Parser(argsme_parser, lexer)
-    parser.parse_tokens()
+    with open(file_path, 'r') as file:
+      data = json.load(file)
 
-    emitter = Emitter(parser.uuid, parser.document)
-    emitter.emit()
+    num_args_ql = '.arguments | length'
+    num_args = pyjq.first(num_args_ql, data)
+    print(f"Number of arguments: {num_args}")
+
+    for i in range(num_args):
+      argument_query = f".arguments[{i}]"
+      argument = pyjq.first(argument_query, data)
+
+      source = json.dumps(argument)
+      argsme_lexer = ArgsmeLexer()
+      lexer = Lexer(argsme_lexer, source)
+      lexer.tokenize_source()
+
+      argsme_parser = ArgsmeParser()
+      parser = Parser(argsme_parser, lexer)
+      parser.parse_tokens()
+
+      emitter = Emitter(parser.uuid, parser.document)
+      emitter.emit()
