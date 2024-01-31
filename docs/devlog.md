@@ -98,3 +98,16 @@ Focus: Data layer
 - Fixed bug in lexer:
   - 2024-01-31 16:37:35,300 - data_importer.lexer - ERROR - Lexing error: String not terminated properly | Argument ID: fbe6ad2-2019-04-18T11:12:36Z-00001-000
 - The bug was occurring because the string_lookahead method failed to handle escaped quotes within strings, incorrectly interpreting them as the end of the string.
+- Able to run the importer, wow it's slow - might need to be ran overnight.
+- I estimate it might take 380hrs to complete 
+- Number of performance improvement options I can think of
+  - Reduce write intensive scenarios
+    - Do checks in data_importer before invoking lexer, parser
+    - Parser currently always writes to db.
+  - Redis cache as batch processing db (faster in write intensive scenarios, sqlite is slow in writing)
+  - Only compile node and edge data if the argument isn't the root argument
+  - Problem with using redis is ultimately it would need to be cloud deployed in prod env, this goes against argdb ethos of being self contained and data privacy focused.
+  - Will need to give this greater thought, as cloud is looking like an innevitable fact with need for vector db also.
+  - I wanted it to be plug in and play - easy UX
+  - But users might need to setup a local redis and vector db to access all features if they want data privacy?
+- Encoutered Lexing error: String not terminated properly | Argument ID: 2e465d2c-2019-04-18T15:47:29Z-00003-000
