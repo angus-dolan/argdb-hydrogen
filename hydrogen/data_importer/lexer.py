@@ -2,6 +2,9 @@ from models.tokens import Token, ArgsmeToken
 from collections import deque
 from abc import ABC, abstractmethod
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LexerStrategy(ABC):
   @abstractmethod
@@ -9,7 +12,8 @@ class LexerStrategy(ABC):
     pass
 
 class Lexer:
-  def __init__(self, lexer_strategy: LexerStrategy, source):
+  def __init__(self, lexer_strategy: LexerStrategy, source, id):
+    self.id = id
     self.tokens = deque()
     self._lexer_strategy = lexer_strategy
     self.source = self.preprocess_source(source)
@@ -47,19 +51,33 @@ class Lexer:
     while self.cur_char == ' ' or self.cur_char == '\t' or self.cur_char == '\r':
       self.next_char()
 
-  def string_lookahead(self, lexer):
-    lexer.next_char()
+  def string_lookahead(self):
+    self.next_char()
     string_value = ''
-    while lexer.cur_char != '"':
-      if lexer.cur_char == '\0': # EOF check
-        lexer.abort('String not terminated properly')
-      string_value += lexer.cur_char
-      lexer.next_char()
-    lexer.next_char()
+    while True:
+      if self.cur_char == '\\':  # Handle escape character
+        self.next_char()
+        if self.cur_char == '"':
+          string_value += '"'
+        else:
+          string_value += '\\' + self.cur_char
+      elif self.cur_char == '"':  # End of string
+        break
+      elif self.cur_char == '\0':  # EOF without closing quote
+        self.abort('String not terminated properly', self.id)
+        break
+      else:
+        string_value += self.cur_char
+      self.next_char()
+    self.next_char()  # Skip the closing quote
     return string_value
   
-  def abort(self, message):
-    sys.exit('Lexing error: ' + message)
+  def abort(self, message, argument_id=None):
+    error_message = f'Lexing error: {message}'
+    if argument_id:
+      error_message += f' | Argument ID: {argument_id}'
+    logger.error(error_message)
+    sys.exit(error_message)
 
 class ArgsmeLexer(LexerStrategy):
   def __init__(self):
@@ -97,7 +115,7 @@ class ArgsmeLexer(LexerStrategy):
     lexer.next_char()
 
   def handle_keyword(self, lexer):
-    keyword = lexer.string_lookahead(lexer)
+    keyword = lexer.string_lookahead()
 
     if self.standalone_keyword(keyword):
       return Token(keyword, self.keywords_map[keyword])

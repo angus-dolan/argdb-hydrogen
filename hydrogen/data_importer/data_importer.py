@@ -1,7 +1,6 @@
 from .lexer import *
 from .parser import *
 from .emitter import *
-from log_config import setup_logging
 import pyjq
 import json
 import os
@@ -9,9 +8,9 @@ import time
 import logging
 
 logger = logging.getLogger(__name__)
+
 class DataImporter:
-  def __init__(self, file_path):
-    setup_logging('data_importer.log')    
+  def __init__(self, file_path):  
     self.file_path = file_path
     self.data = None
     self.num_args = 0
@@ -37,8 +36,13 @@ class DataImporter:
       start_time = time.time()
       for i in range(self.num_args):
         argument = pyjq.first(f".arguments[{i}]", self.data)
+        arg_id = argument.get("id", "Unknown") 
 
-        lexer = Lexer(ArgsmeLexer(), json.dumps(argument))
+        if arg_id == "Unknown":
+          self.abort(f"Can't import argument as ID is unknown")
+        
+        logger.info(f"Importing argument ID: {arg_id}")
+        lexer = Lexer(ArgsmeLexer(), json.dumps(argument), arg_id)
         lexer.tokenize_source()
 
         parser = Parser(ArgsmeParser(), lexer)

@@ -12,7 +12,7 @@ def setup_logging(log_file, level=logging.DEBUG):
     format=log_format, 
     level=level
   )
-
+        
   console_handler = logging.StreamHandler()
   console_handler.setFormatter(logging.Formatter(log_format))
   logging.getLogger('').addHandler(console_handler)

@@ -7,6 +7,7 @@ import sys
 import uuid
 import hashlib
 import json 
+import logging
 
 db = Database()
 
@@ -46,7 +47,7 @@ class Parser:
       self.peek_token = self.lexer.tokens.popleft()
 
   def abort(self, message):
-    sys.exit("Error: " + message)
+    sys.exit("Error: " + message) # TODO: Add logging
 
 class DataHandler(ABC):
   def convert_to_uuid(self, string):

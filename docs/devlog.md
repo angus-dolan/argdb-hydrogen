@@ -93,6 +93,8 @@ Focus: Data layer
 - Instead of having to use `from database import Database, Raw` I should use an adapter - therefore I won't need to import Raw and can just ping sadface docs directly to repo without having to use Raw model, which could easily change.
 
 ### Wed 31st Jan
-- Fixed bug in parser match and handle
 - Introduced logging system to help debug importer
-  - "Lexing error: String not terminated properly"
+- Fixed bug in parser match and handle
+- Fixed bug in lexer:
+  - 2024-01-31 16:37:35,300 - data_importer.lexer - ERROR - Lexing error: String not terminated properly | Argument ID: fbe6ad2-2019-04-18T11:12:36Z-00001-000
+- The bug was occurring because the string_lookahead method failed to handle escaped quotes within strings, incorrectly interpreting them as the end of the string.
