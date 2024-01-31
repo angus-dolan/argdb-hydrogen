@@ -1,36 +1,55 @@
 from .lexer import *
 from .parser import *
 from .emitter import *
+from log_config import setup_logging
 import pyjq
 import json
 import os
+import time
+import logging
 
+logger = logging.getLogger(__name__)
 class DataImporter:
+  def __init__(self, file_path):
+    setup_logging('data_importer.log')    
+    self.file_path = file_path
+    self.data = None
+    self.num_args = 0
+    self.load_file()
+    self.get_num_args()
+
+  def abort(self, message):
+    logger.exception(message)
+    sys.exit()
+
+  def load_file(self):
+    if not os.path.exists(self.file_path):
+      self.abort(f"File does not exist: {self.file_path}")
+      raise
+    with open(self.file_path, 'r') as file:
+      self.data = json.load(file)
+
+  def get_num_args(self):
+    self.num_args = pyjq.first('.arguments | length', self.data)
+
   def import_file(self):
-    file_path = './data_importer/example_data/physical_vs_mental.json'
+    try: 
+      start_time = time.time()
+      for i in range(self.num_args):
+        argument = pyjq.first(f".arguments[{i}]", self.data)
 
-    if not os.path.exists(file_path):
-      return print(f"File not found: {file_path}")
+        lexer = Lexer(ArgsmeLexer(), json.dumps(argument))
+        lexer.tokenize_source()
 
-    with open(file_path, 'r') as file:
-      data = json.load(file)
+        parser = Parser(ArgsmeParser(), lexer)
+        parser.parse_tokens()
 
-    num_args_ql = '.arguments | length'
-    num_args = pyjq.first(num_args_ql, data)
-    print(f"Number of arguments: {num_args}")
+        emitter = Emitter(parser.uuid, parser.document)
+        emitter.emit()
 
-    for i in range(num_args):
-      argument_query = f".arguments[{i}]"
-      argument = pyjq.first(argument_query, data)
-
-      source = json.dumps(argument)
-      argsme_lexer = ArgsmeLexer()
-      lexer = Lexer(argsme_lexer, source)
-      lexer.tokenize_source()
-
-      argsme_parser = ArgsmeParser()
-      parser = Parser(argsme_parser, lexer)
-      parser.parse_tokens()
-
-      emitter = Emitter(parser.uuid, parser.document)
-      emitter.emit()
+      end_time = time.time()
+      elapsed_time = end_time - start_time
+      print(f"Elapsed time: {elapsed_time} seconds")
+    except Exception as e:
+      logger.exception("Failed to import file: %s", e)
+      raise

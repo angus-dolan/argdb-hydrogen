@@ -9,5 +9,5 @@ if __name__ == "__main__":
   config.initialize()
   database.initialize()
 
-  importer = DataImporter()
+  importer = DataImporter('./data_importer/example_data/args-me.json')
   importer.import_file()

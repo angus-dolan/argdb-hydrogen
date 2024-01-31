@@ -91,3 +91,8 @@ Focus: Data layer
 - Created a BaseRepository for all repos to inherit from
 - Realised using source_id for document_id will work, was needed when updating an existing sadface document
 - Instead of having to use `from database import Database, Raw` I should use an adapter - therefore I won't need to import Raw and can just ping sadface docs directly to repo without having to use Raw model, which could easily change.
+
+### Wed 31st Jan
+- Fixed bug in parser match and handle
+- Introduced logging system to help debug importer
+  - "Lexing error: String not terminated properly"

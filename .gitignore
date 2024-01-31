@@ -1,3 +1,6 @@
+# Example data
+hydrogen/data_importer/example_data/args-me.json
+
 # ArgDB configuration file
 *.cfg
 

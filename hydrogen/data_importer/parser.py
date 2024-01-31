@@ -108,27 +108,19 @@ class ArgsmeDataHandler(DataHandler):
     self.stance = value
 
   def handle_token(self, parser: Parser):
-    token_type = parser.cur_token.type
-    token_value = parser.cur_token.value
-    handler = self.token_handlers.get(token_type)
+    argsme_type = parser.cur_token.type
+    handler = self.token_handlers.get(argsme_type)
 
-    if handler: handler(token_value)
-     
+    if handler:
+      token_value = parser.cur_token.value
+      handler(token_value)
     
 class ArgsmeParser(ParserStrategy):
   def __init__ (self):
     self.builder = SadfaceBuilder()
     self.data_handler = ArgsmeDataHandler()
     
-  def match(self, parser: Parser):
-    type = parser.cur_token.type
-
-    if type.name not in ArgsmeToken.__members__:
-      parser.abort(f"Token type '{type}' is not a valid ArgsmeToken")
-
-    if parser.cur_token.type != type:
-      parser.abort(f"Expected {type.name}, got {parser.cur_token.type.name}")
-
+  def match(self, parser: Parser):    
     self.data_handler.handle_token(parser)
     parser.next_token()
   
@@ -157,7 +149,9 @@ class ArgsmeParser(ParserStrategy):
 
   def update_existing_document(self, parser: Parser):
     result = db.raw.get(self.data_handler.source_id)
-    if result is None: parser.abort(f"Document with source_id {self.data_handler.source_id} does not exist")
+    
+    if result is None: 
+      parser.abort(f"Document with source_id {self.data_handler.source_id} does not exist")
 
     document = json.loads(result.data)
     self.builder.with_existing_document(document)
