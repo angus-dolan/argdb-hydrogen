@@ -55,16 +55,18 @@ class Lexer:
     self.next_char()
     string_value = ''
     while True:
-      if self.cur_char == '\\':  # Handle escape character
+      if self.cur_char == '\0':  # EOF without closing quote
+        self.abort('String not terminated properly', self.id)
+        break
+      elif self.cur_char == '\\':  # Handle escape character
         self.next_char()
         if self.cur_char == '"':
           string_value += '"'
-        else:
+        elif self.cur_char in ['\\', 'n', 't', 'r']:
           string_value += '\\' + self.cur_char
+        else:
+          string_value += self.cur_char
       elif self.cur_char == '"':  # End of string
-        break
-      elif self.cur_char == '\0':  # EOF without closing quote
-        self.abort('String not terminated properly', self.id)
         break
       else:
         string_value += self.cur_char

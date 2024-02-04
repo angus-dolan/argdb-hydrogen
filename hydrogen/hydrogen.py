@@ -13,5 +13,5 @@ if __name__ == "__main__":
   config.initialize()
   database.initialize()
 
-  importer = DataImporter('./data_importer/example_data/args-me.json')
+  importer = DataImporter('./data_importer/example_data/broken.json')
   importer.import_file()

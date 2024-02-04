@@ -111,3 +111,5 @@ Focus: Data layer
   - I wanted it to be plug in and play - easy UX
   - But users might need to setup a local redis and vector db to access all features if they want data privacy?
 - Encoutered Lexing error: String not terminated properly | Argument ID: 2e465d2c-2019-04-18T15:47:29Z-00003-000
+
+### Sun 4th Feb
