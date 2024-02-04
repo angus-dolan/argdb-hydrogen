@@ -1,7 +1,7 @@
 from log_config import setup_logging
 from config import Config
 from database import Database
-from data_importer import DataImporter
+from importer import ArgsmeBatchImporter
 import logging
 
 config = Config()
@@ -13,5 +13,5 @@ if __name__ == "__main__":
   config.initialize()
   database.initialize()
 
-  importer = DataImporter('./data_importer/example_data/broken.json')
-  importer.import_file()
+  importer = ArgsmeBatchImporter('./importer/example_data/argsme_grouped.json')
+  importer.batch_import()

@@ -50,29 +50,6 @@ class Lexer:
   def skip_whitespace(self):
     while self.cur_char == ' ' or self.cur_char == '\t' or self.cur_char == '\r':
       self.next_char()
-
-  def string_lookahead(self):
-    self.next_char()
-    string_value = ''
-    while True:
-      if self.cur_char == '\0':  # EOF without closing quote
-        self.abort('String not terminated properly', self.id)
-        break
-      elif self.cur_char == '\\':  # Handle escape character
-        self.next_char()
-        if self.cur_char == '"':
-          string_value += '"'
-        elif self.cur_char in ['\\', 'n', 't', 'r']:
-          string_value += '\\' + self.cur_char
-        else:
-          string_value += self.cur_char
-      elif self.cur_char == '"':  # End of string
-        break
-      else:
-        string_value += self.cur_char
-      self.next_char()
-    self.next_char()  # Skip the closing quote
-    return string_value
   
   def abort(self, message, argument_id=None):
     error_message = f'Lexing error: {message}'
