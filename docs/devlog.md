@@ -119,3 +119,14 @@ Focus: Data layer
   - Collections (Way to logically organise data, e.g "" and "" collections)  
   - Imports: ID, CollectionID, Successes, Failures (track importing into a collection)
   - But elastic search would index all collections to provide a global search
+
+### Tue 6th Feb
+When rebuilding lexer to be a recursive moore machine,
+The argsme dataset structure provided quite difficult to access nested keys 
+For example
+    `print(self.json_data['premises'][0]['stance'])`
+    `print(self.json_data['context']['sourceTitle'])`
+    `print(self.json_data['id'])`
+
+Premises needed integer access since it was an array, context needed string.
+
