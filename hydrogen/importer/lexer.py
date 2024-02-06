@@ -1,10 +1,14 @@
 from abc import ABC, abstractmethod
 from .models import *
+from collections import deque
 import logging
 
 logger = logging.getLogger(__name__)
 
 class BaseLexer(ABC):
+    def __init__(self):
+        self.lexed_tokens = deque()
+
     @abstractmethod
     def tokenize(self):
         pass
@@ -17,13 +21,18 @@ class Lexer:
     def set_lexer_strategy(self, lexer_strategy):
         self._lexer_strategy = lexer_strategy
 
+    def get_lexed_tokens(self):
+        return self._lexer_strategy.lexed_tokens
+
     def tokenize_argument(self):
         return self._lexer_strategy.tokenize()
 
 
 class ArgsmeLexer(BaseLexer):
     def __init__(self, json_data):
+        super().__init__()
         self.json_data = json_data
+        self.lexed_tokens = deque()
         self.current_state = 'start'
         self.STATE_TRANSITIONS = {
             'start': 'premises',
@@ -46,7 +55,7 @@ class ArgsmeLexer(BaseLexer):
             'id': [ArgsmeToken.ID],
             'conclusion': [ArgsmeToken.CONCLUSION]
         }
-        self.lexed_tokens = []
+
 
     def process(self):
         next_state = self.STATE_TRANSITIONS.get(self.current_state)

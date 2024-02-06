@@ -1,4 +1,4 @@
-#from hydrogen.models import Sadface
+from .models.sadface import Sadface
 
 class SadfaceBuilder:
     def __init__(self):

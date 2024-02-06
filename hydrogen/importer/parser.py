@@ -1,13 +1,11 @@
 from .models.tokens import Token, ArgsmeToken
-from .helpers.sadface_builder import SadfaceBuilder
-from .lexer import Lexer
+from .builder import SadfaceBuilder
 from database import Database
 from abc import ABC, abstractmethod
 import sys
 import uuid
 import hashlib
-import json 
-import logging
+import json
 
 db = Database()
 
@@ -17,9 +15,9 @@ class ParserStrategy(ABC):
     pass
 
 class Parser:
-  def __init__(self, parser_strategy: ParserStrategy, lexer: Lexer):
+  def __init__(self, parser_strategy: ParserStrategy, lexed_tokens: dict):
     self._parser_strategy = parser_strategy
-    self.lexer = lexer
+    self.tokens = lexed_tokens
     self.cur_token = None
     self.peek_token = None
     self.uuid = None
@@ -30,7 +28,7 @@ class Parser:
   def set_parser_strategy(self, parser_strategy: ParserStrategy):
     self._parser_strategy = parser_strategy
 
-  def parse_tokens(self):
+  def parse_argument(self):
     return self._parser_strategy.parse(self)
   
   def check_token(self, type):
@@ -40,8 +38,8 @@ class Parser:
     self.cur_token = self.peek_token
     self.peek_token = Token('', ArgsmeToken.EOF)
 
-    if self.lexer.tokens:
-      self.peek_token = self.lexer.tokens.popleft()
+    if self.tokens:
+      self.peek_token = self.tokens.popleft()
 
   def abort(self, message):
     sys.exit("Error: " + message) # TODO: Add logging

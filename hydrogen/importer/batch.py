@@ -1,4 +1,6 @@
 from .lexer import Lexer, ArgsmeLexer
+from .parser import Parser, ArgsmeParser
+from .emitter import Emitter
 from .helpers.timer import Timer
 from abc import ABC, abstractmethod
 import logging
@@ -61,6 +63,12 @@ class ArgsmeBatchImporter(BaseImporter):
 
                         lexer = Lexer(ArgsmeLexer(argument))
                         lexer.tokenize_argument()
+
+                        parser = Parser(ArgsmeParser(), lexer.get_lexed_tokens())
+                        parser.parse_argument()
+
+                        emitter = Emitter(uuid=parser.uuid, doc=parser.document)
+                        emitter.emit()
 
             logger.info(f"Batch imported {self.num_args} arguments. Total time: {timer.elapsed} seconds")
         except Exception as e:
