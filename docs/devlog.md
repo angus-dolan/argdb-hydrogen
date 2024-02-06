@@ -113,3 +113,9 @@ Focus: Data layer
 - Encoutered Lexing error: String not terminated properly | Argument ID: 2e465d2c-2019-04-18T15:47:29Z-00003-000
 
 ### Sun 4th Feb
+- Refactored data_importer > importer
+- Uses strategy pattern and batch import system
+- Considered new db schema:
+  - Collections (Way to logically organise data, e.g "" and "" collections)  
+  - Imports: ID, CollectionID, Successes, Failures (track importing into a collection)
+  - But elastic search would index all collections to provide a global search

@@ -1,3 +1,6 @@
+# VSCode Settings
+.vscode/
+
 # Example data
 hydrogen/importer/example_data/*.json
 

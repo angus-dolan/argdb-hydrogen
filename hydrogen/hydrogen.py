@@ -13,5 +13,5 @@ if __name__ == "__main__":
   config.initialize()
   database.initialize()
 
-  importer = ArgsmeBatchImporter('./importer/example_data/argsme_grouped.json')
+  importer = ArgsmeBatchImporter('./importer/example_data/broken.json')
   importer.batch_import()

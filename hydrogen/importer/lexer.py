@@ -1,134 +1,111 @@
 from models.tokens import Token, ArgsmeToken
-from collections import deque
 from abc import ABC, abstractmethod
-import sys
-import logging
 
-logger = logging.getLogger(__name__)
-
-class LexerStrategy(ABC):
+class BaseLexer(ABC):
   @abstractmethod
-  def tokenize(self, lexer):
+  def tokenize(self):
     pass
 
 class Lexer:
-  def __init__(self, lexer_strategy: LexerStrategy, source, id):
-    self.id = id
-    self.tokens = deque()
-    self._lexer_strategy = lexer_strategy
-    self.source = self.preprocess_source(source)
-    self.cur_char = ''
-    self.cur_pos = -1
-    self.next_char()
-
-  def preprocess_source(self, source):
-    in_string = False
-    processed_source = ''
-
-    for char in source:
-      if char == '"' and (len(processed_source) == 0 or processed_source[-1] != '\\'):
-        in_string = not in_string
-      if not in_string and char in [' ', '\t', '\r']:
-        continue
-      processed_source += char
-
-    return processed_source + '\0'
-
-  def set_lexer_strategy(self, lexer_strategy: LexerStrategy):
+  def __init__(self, lexer_strategy: BaseLexer):
     self._lexer_strategy = lexer_strategy
 
-  def tokenize_source(self):
-    return self._lexer_strategy.tokenize(self)
+  def set_lexer_strategy(self, lexer_strategy):
+    self._lexer_strategy = lexer_strategy
+    
+  def tokenize_argument(self):
+    return self._lexer_strategy.tokenize()
 
-  def next_char(self):
-    self.cur_pos += 1
-    if self.cur_pos >= len(self.source):
-      self.cur_char = '\0' # EOF
-    else:
-      self.cur_char = self.source[self.cur_pos]
-  
-  def skip_whitespace(self):
-    while self.cur_char == ' ' or self.cur_char == '\t' or self.cur_char == '\r':
-      self.next_char()
-  
-  def abort(self, message, argument_id=None):
-    error_message = f'Lexing error: {message}'
-    if argument_id:
-      error_message += f' | Argument ID: {argument_id}'
-    logger.error(error_message)
-    sys.exit(error_message)
-
-class ArgsmeLexer(LexerStrategy):
-  def __init__(self):
-    self.keywords_map = {
-      'premises': ArgsmeToken.PREMISES,
-      'text': ArgsmeToken.PREMISES_TEXT,
-      'stance': ArgsmeToken.PREMISES_STANCE,
-      'context': ArgsmeToken.CTX,
-      'sourceId': ArgsmeToken.CTX_SRC_ID,
-      'previousArgumentInSourceId': ArgsmeToken.CTX_PREV_ID,
-      'acquisitionTime': ArgsmeToken.CTX_ACQ_TIME,
-      'discussionTitle': ArgsmeToken.CTX_TITLE,
-      'sourceTitle': ArgsmeToken.CTX_SRC_TITLE,
-      'sourceUrl': ArgsmeToken.CTX_SRC_URL,
-      'nextArgumentInSourceId': ArgsmeToken.CTX_NEXT_ID,
-      'id': ArgsmeToken.ID,
-      'conclusion': ArgsmeToken.CONCLUSION,
+class ArgsmeLexer(BaseLexer):
+  def __init__(self, json_data):
+    self.json_data = json_data
+    self.current_state = 'start'
+    # self.STATES = {
+    #   'start': self.start_state,
+    #   'premises': self.process_premises,
+    #   'context': self.process_context,
+    #   'id': self.process_id,
+    #   'conclusion': self.process_conclusion,
+    #   'end': self.end_state,
+    #   'error': self.error
+    # }
+    self.STATE_TRANSITIONS = {
+      'start': 'premises',
+      'premises': 'context',
+      'context': 'id',
+      'id': 'conclusion',
+      'conclusion': 'end',
+      'end': 'start'
     }
-    self.standalone_keywords = {
-      'premises',
-      'context'
+    self.TOKENS = {
+      'premises': [
+        ArgsmeToken.PREMISES_STANCE, 
+        ArgsmeToken.PREMISES_TEXT
+      ],
+      'context': [
+        ArgsmeToken.CTX_ACQ_TIME, 
+        ArgsmeToken.CTX_SRC_ID,
+        ArgsmeToken.CTX_PREV_ID,
+        ArgsmeToken.CTX_TITLE
+      ],
+      'id': [ArgsmeToken.ID],
+      'conclusion': [ArgsmeToken.CONCLUSION]
     }
+    self.tokens = []
+
+  def access_nested_json(self, keys):
+    value = self.json_data
+    for key in keys:
+      try:
+        value = value[key]
+      except KeyError:
+        self.error(f"Key '{key}' not found in JSON data.")
+        return None
+    return value
+
+  def process(self):
+    if self.current_state == 'end':
+      return
     
-  def extract_tokens(self, lexer):
-    lexer.skip_whitespace()
+    self.current_state = self.STATE_TRANSITIONS[self.current_state]
+    for token in self.TOKENS[self.current_state]:
+      value = self.json_data['context']
+      value = self.json_data['context']['sourceId']
+      self.tokens.append(Token(self.json_data[self.current_state][token], token))
+    self.process()
 
-    if lexer.cur_char == '\0':
-      return lexer.tokens.append(Token('', ArgsmeToken.EOF))
-    
-    if lexer.cur_char == '"':
-      token = self.handle_keyword(lexer)
-      if token.type != ArgsmeToken.UNKNOWN:
-        return lexer.tokens.append(token)
-    
-    lexer.next_char()
+  def error(self, error_message):
+    print("Error:", error_message)
+    self.current_state = 'end'
 
-  def handle_keyword(self, lexer):
-    keyword = lexer.string_lookahead()
+  def start_state(self):
+    self.current_state = 'premises'
+    self.STATES[self.current_state]()
 
-    if self.standalone_keyword(keyword):
-      return Token(keyword, self.keywords_map[keyword])
-    elif self.keyword_with_value(keyword):
-      return Token(self.keyword_value(lexer), self.keywords_map[keyword])
-    
-    return Token(keyword, ArgsmeToken.UNKNOWN)
-  
-  def standalone_keyword(self, keyword):
-    return keyword in self.standalone_keywords
+  def process_premises(self):
+    # self.premises = self.json_data['premises']
+    self.current_state = 'context'
+    self.STATES[self.current_state]()
 
-  def keyword_with_value(self, keyword):
-    return keyword in self.keywords_map
-  
-  def keyword_value(self, lexer):
-    keyword_value = ''
+  def process_context(self):
+    # self.context = self.json_data['context']
+    self.current_state = 'id'
+    self.STATES[self.current_state]()
 
-    while lexer.cur_char != '"' and lexer.cur_char != '\0':
-      lexer.next_char()
-    lexer.next_char() # Skip the opening quote
+  def process_id(self):
+    # self.id = self.json_data['id']
+    self.current_state = 'conclusion'
+    self.STATES[self.current_state]()
 
-    while lexer.cur_char != '"' and lexer.cur_char != '\0':
-      keyword_value += lexer.cur_char
-      lexer.next_char()
-      if lexer.cur_char == '\0':
-        lexer.abort('String literal not terminated')
+  def process_conclusion(self):
+    # self.conclusion = self.json_data['conclusion']
+    self.current_state = 'end'
+    self.STATES[self.current_state]()
 
-    lexer.next_char()
-    return keyword_value.strip()
-  
-  def tokenize(self, lexer):
-    while True:
-      self.extract_tokens(lexer)
-      if lexer.tokens and lexer.tokens[-1].type == ArgsmeToken.EOF:
-        break
+  def end_state(self):
+    self.current_state = 'start' # Reset to start for potential reuse
 
-    return lexer.tokens
+  def tokenize(self):
+    # self.STATES[self.current_state]()
+    self.process()
+    print(self.tokens)

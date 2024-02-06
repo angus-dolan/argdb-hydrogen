@@ -1,5 +1,5 @@
 from models.tokens import Token, ArgsmeToken
-from .sadface_builder import SadfaceBuilder
+from helpers.sadface_builder import SadfaceBuilder
 from .lexer import Lexer
 from database import Database
 from abc import ABC, abstractmethod
@@ -35,9 +35,6 @@ class Parser:
   
   def check_token(self, type):
     return type == self.cur_token.type
-
-  def check_peek(self, type):
-    return type == self.peek_token.type
 
   def next_token(self):
     self.cur_token = self.peek_token

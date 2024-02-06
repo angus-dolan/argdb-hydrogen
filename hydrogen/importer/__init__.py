@@ -1,1 +1,1 @@
-from .importer import ArgsmeBatchImporter
+from .batch import ArgsmeBatchImporter

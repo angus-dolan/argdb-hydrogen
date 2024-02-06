@@ -1,3 +1,4 @@
+from .lexer import Lexer, ArgsmeLexer
 from abc import ABC, abstractmethod
 from helpers.timer import Timer
 import logging
@@ -47,11 +48,15 @@ class ArgsmeBatchImporter(BaseImporter):
         for batch_num in range(self.num_batches):
           start_index = batch_num * self.batch_size
           end_index = min(start_index + self.batch_size, self.num_args)
+          logger.info(f"Importing arguments {start_index} to {end_index} of {self.num_args}")
+
           for i in range(start_index, end_index):
             argument = pyjq.first(f".arguments[{i}]", self.json)
-            print(batch_num)
-            print(i)
-            print(argument)
-      logger.info(f"Batched imported {self.num_args} arguments. Total time: {timer.elapsed} seconds")
+
+            lexer = Lexer(ArgsmeLexer(argument))
+            lexer.tokenize_argument()
+
+
+      logger.info(f"Batch imported {self.num_args} arguments. Total time: {timer.elapsed} seconds")
     except Exception as e:
       self.abort(f"Failed to import data: {e}")
