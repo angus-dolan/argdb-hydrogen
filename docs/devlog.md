@@ -130,3 +130,43 @@ For example
 
 Premises needed integer access since it was an array, context needed string.
 
+Ended up modifying ArgsmeTokens to store nested keys like:
+```
+PREMISES = ['premises']
+PREMISES_TEXT = ['premises', 0, 'text']
+PREMISES_STANCE = ['premises', 0, 'stance']
+CTX = ['context']
+CTX_SRC_ID = ['context', 'sourceId']
+...
+ID = ['id']
+CONCLUSION = ['conclusion']
+```
+
+Another design choice I want to remember is why I actually chose to make the lexer work recursively.
+If I didn't store STATE_TRANSITIONS AND STATE_TOKENS like below, I would have needed methods for each transition.
+My thinking with this is, if I need to track a new token, I just need to add it to STATE_TRANSITIONS and STATE_TOKENS instead of needing a new method. Which keeps the lexer much smaller, also I won't need to write a test for every new method. 
+```
+self.STATE_TRANSITIONS = {
+    'start': 'premises',
+    'premises': 'context',
+    'context': 'id',
+    'id': 'conclusion',
+    'conclusion': 'end',
+}
+self.STATE_TOKENS = {
+    'premises': [
+        ArgsmeToken.PREMISES_STANCE,
+        ArgsmeToken.PREMISES_TEXT
+    ],
+    'context': [
+        ArgsmeToken.CTX_ACQ_TIME,
+        ArgsmeToken.CTX_SRC_ID,
+        ArgsmeToken.CTX_PREV_ID,
+        ArgsmeToken.CTX_TITLE
+    ],
+    'id': [ArgsmeToken.ID],
+    'conclusion': [ArgsmeToken.CONCLUSION]
+}
+```
+
+Lexer is much smaller and cleaner now.

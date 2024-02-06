@@ -8,8 +8,8 @@ class Token:
 class ArgsmeToken(enum.Enum):
   EOF = -1
   PREMISES = ['premises']
-  PREMISES_TEXT = ['premises', 'text']
-  PREMISES_STANCE = ['premises', 'stance']
+  PREMISES_TEXT = ['premises', 0, 'text']
+  PREMISES_STANCE = ['premises', 0, 'stance']
   CTX = ['context']
   CTX_SRC_ID = ['context', 'sourceId']
   CTX_PREV_ID = ['context', 'previousArgumentInSourceId']
