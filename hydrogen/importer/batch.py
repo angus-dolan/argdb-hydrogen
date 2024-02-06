@@ -1,6 +1,6 @@
 from .lexer import Lexer, ArgsmeLexer
+from .helpers.timer import Timer
 from abc import ABC, abstractmethod
-from helpers.timer import Timer
 import logging
 import pyjq
 import json
@@ -15,6 +15,7 @@ class BaseImporter(ABC):
         self.file_path = file_path
 
     def abort(self, message):
+        print(message)
         logger.exception(message)
         sys.exit()
 
@@ -34,9 +35,12 @@ class ArgsmeBatchImporter(BaseImporter):
 
     def load_json(self):
         if not os.path.exists(self.file_path):
-            self.abort(f"File does not exist: {self.file_path}")
-        with open(self.file_path, 'r') as file:
-            return json.load(file)
+            raise FileNotFoundError(f"File does not exist: {self.file_path}")
+        try:
+            with open(self.file_path, 'r') as file:
+                return json.load(file)
+        except json.JSONDecodeError as e:
+            self.abort(f"Error decoding JSON from {self.file_path}: {e}")
 
     def calculate_batch_parameters(self):
         self.num_args = pyjq.first('.arguments | length', self.json)

@@ -1,5 +1,5 @@
-from models.tokens import Token, ArgsmeToken
-from helpers.sadface_builder import SadfaceBuilder
+from .models.tokens import Token, ArgsmeToken
+from .helpers.sadface_builder import SadfaceBuilder
 from .lexer import Lexer
 from database import Database
 from abc import ABC, abstractmethod

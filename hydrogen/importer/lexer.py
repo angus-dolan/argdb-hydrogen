@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from models import *
+from .models import *
 import logging
 
 logger = logging.getLogger(__name__)
@@ -63,20 +63,24 @@ class ArgsmeLexer(BaseLexer):
         self.process()
 
     def get_token_value(self, nested_keys):
-        root = self.json_data[nested_keys[0]]
+        try:
+            root = self.json_data[nested_keys[0]]
 
-        if len(nested_keys) == 1:
-            return root
+            if len(nested_keys) == 1:
+                return root
 
-        value = self.json_data
-        for key in nested_keys:
-            value = value[key]
+            value = self.json_data
+            for key in nested_keys:
 
-        return value
+                    value = value[key]
+
+            return value
+        except Exception as e:
+            self.error(f"Lexer: couldn't get token value {e}")
 
     def error(self, error_message):
-        logger.error(error_message)
         self.current_state = 'end'
+        raise Exception(error_message)
 
     def tokenize(self):
         self.process()
