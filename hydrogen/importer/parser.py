@@ -30,7 +30,7 @@ class Parser:
 
   def parse_argument(self):
     return self._parser_strategy.parse(self)
-  
+
   def check_token(self, type):
     return type == self.cur_token.type
 
@@ -90,16 +90,16 @@ class ArgsmeDataHandler(DataHandler):
 
   def handle_prev_id(self, value):
     self.previous_id = self.convert_to_uuid(value)
-  
+
   def handle_title(self, value):
     self.title = value
-  
+
   def handle_conclusion(self, value):
     self.conclusion = value
-  
+
   def handle_premise_txt(self, value):
     self.premise_txt = value
-  
+
   def handle_stance(self, value):
     self.stance = value
 
@@ -110,16 +110,16 @@ class ArgsmeDataHandler(DataHandler):
     if handler:
       token_value = parser.cur_token.value
       handler(token_value)
-    
+
 class ArgsmeParser(ParserStrategy):
   def __init__ (self):
     self.builder = SadfaceBuilder()
     self.data_handler = ArgsmeDataHandler()
-    
-  def match(self, parser: Parser):    
+
+  def match(self, parser: Parser):
     self.data_handler.handle_token(parser)
     parser.next_token()
-  
+
   def get_node(self):
     return {
       "id": self.data_handler.id,
@@ -129,7 +129,7 @@ class ArgsmeParser(ParserStrategy):
       "text": self.data_handler.premise_txt,
       "type": "atom",
     }
-  
+
   def get_edge(self):
     return {
       "source_id": self.data_handler.previous_id,
@@ -145,8 +145,8 @@ class ArgsmeParser(ParserStrategy):
 
   def update_existing_document(self, parser: Parser):
     result = db.raw.get(self.data_handler.source_id)
-    
-    if result is None: 
+
+    if result is None:
       parser.abort(f"Document with source_id {self.data_handler.source_id} does not exist")
 
     document = json.loads(result.data)
@@ -157,15 +157,15 @@ class ArgsmeParser(ParserStrategy):
   def parse(self, parser: Parser):
     parser.document = None
     parser.uuid = None
-    
+
     while not parser.check_token(ArgsmeToken.EOF):
       self.match(parser)
-    
+
     if self.data_handler.previous_id == "":
       self.build_new_document()
     else:
       self.update_existing_document(parser)
-    
+
     parsed_document = (self.builder.build())
     valid, error_messages = self.builder.validate()
 

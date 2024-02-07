@@ -170,3 +170,82 @@ self.STATE_TOKENS = {
 ```
 
 Lexer is much smaller and cleaner now.
+
+But performance is becoming a pressing issue.
+
+It took over 10 hours to compile 167/59,637 sadface arguments
+
+
+### Wed 7th Feb
+- Installed pyinstrument to understand performance problems
+- At first glance: it seems around 60% of the runtime is coming from a database call in the **parser**.
+- My initial thought is to focus on this. First idea being to store batches in memory rather than using the database in the parser.
+- After refactoring the lexer yesterday, I feel the parser could do with some improvements anyway.
+- The batch system is a good idea, but each 1k batch of args is only around 2.5MB
+- In theory, I could fit the whole 900mb dataset into 1GB of memory easily.
+- Instead of batching by num of args, lets try batching by size of file.
+- e.g. batches of 1GB
+- I dont think its my lexing and parsing algo's that are slow, its the bad memory allocation use of db.
+```
+  _     ._   __/__   _ _  _  _ _/_   Recorded: 18:17:15  Samples:  156
+ /_//_/// /_\ / //_// / //_'/ //     Duration: 0.171     CPU time: 0.169
+/   _/                      v4.6.2
+
+0.170 <module>  hydrogen.py:1
+├─ 0.116 <module>  importer/__init__.py:1
+│  └─ 0.116 <module>  importer/batch.py:1
+│     ├─ 0.103 <module>  importer/parser.py:1
+
+
+│     │  └─ 0.102 <module>  database.py:1 
+│     │     ├─ 0.066 <module>  sqlalchemy/__init__.py:1
+│     │     │     [42 frames hidden]  sqlalchemy, importlib, email, socket,...
+│     │     ├─ 0.025 <module>  sqlalchemy/ext/declarative/__init__.py:1
+│     │     │     [22 frames hidden]  sqlalchemy, <built-in>
+│     │     ├─ 0.005 create_engine  <string>:1
+│     │     │     [7 frames hidden]  <string>, sqlalchemy
+│     │     └─ 0.004 Raw.__init__  sqlalchemy/orm/decl_api.py:56
+│     │           [9 frames hidden]  sqlalchemy, <string>
+
+
+│     └─ 0.012 <module>  importer/lexer.py:1
+│        ├─ 0.009 <module>  importer/models/__init__.py:1
+│        │  └─ 0.008 <module>  importer/models/sadface.py:1
+│        │     └─ 0.008 <module>  sadface/__init__.py:1
+│        │           [6 frames hidden]  sadface, configparser
+│        └─ 0.002 <module>  logging/__init__.py:1
+├─ 0.045 ArgsmeBatchImporter.batch_import  importer/batch.py:53
+│  ├─ 0.025 Emitter.emit  importer/emitter.py:17
+│  │  ├─ 0.012 RawRepository.get  database.py:88
+│  │  │  ├─ 0.010 Query.one_or_none  sqlalchemy/orm/query.py:2826
+│  │  │  │     [30 frames hidden]  sqlalchemy, logging
+│  │  │  └─ 0.002 Query.filter_by  sqlalchemy/orm/query.py:1773
+│  │  │        [17 frames hidden]  sqlalchemy
+│  │  ├─ 0.011 RawRepository.update  database.py:91
+│  │  │  └─ 0.011 _GeneratorContextManager.__exit__  contextlib.py:141
+│  │  │     └─ 0.011 RawRepository.managed_transaction  database.py:71
+│  │  │        └─ 0.011 Session.commit  sqlalchemy/orm/session.py:1404
+│  │  │              [26 frames hidden]  sqlalchemy, logging, <built-in>
+│  │  └─ 0.002 RawRepository.add  database.py:51
+│  │     └─ 0.002 _GeneratorContextManager.__exit__  contextlib.py:141
+│  │        └─ 0.002 RawRepository.managed_transaction  database.py:71
+│  │           └─ 0.002 Session.commit  sqlalchemy/orm/session.py:1404
+│  │                 [2 frames hidden]  sqlalchemy
+│  └─ 0.019 first  pyjq.py:65
+│        [2 frames hidden]  pyjq
+├─ 0.007 Database.initialize  database.py:104
+│  └─ 0.007 MetaData.create_all  sqlalchemy/sql/schema.py:4905
+│        [13 frames hidden]  sqlalchemy, <built-in>
+└─ 0.002 ArgsmeBatchImporter.__init__  importer/batch.py:30
+   └─ 0.002 ArgsmeBatchImporter.calculate_batch_parameters  importer/batch.py:47
+      └─ 0.002 first  pyjq.py:65
+            [2 frames hidden]  pyjq
+```
+
+- Rebuilt batch importer to open file as stream using ijson
+- Takes less than 6 seconds to load.
+
+Using json.load and jq is around 60% faster than streaming because it avoids streaming with ijson and
+loads the data directly into memory and isn't buffered. Loading a 900MB file in 6 seconds is acceptable
+for our use case. For files larger than the ArgsMe dataset, streaming and batching may be necessary
+to manage memory usage and to accommodate larger datasets.

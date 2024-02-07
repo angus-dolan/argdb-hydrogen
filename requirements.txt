@@ -1,5 +1,3 @@
-# needed for installing pyjq: `brew install autoconf automake`
-
 sqlalchemy==1.4.50
-pyjq==2.6.0
+ijson==3.2.3
 sadface==0.5.3.1

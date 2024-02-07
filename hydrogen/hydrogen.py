@@ -1,4 +1,4 @@
-from importer import *
+from importer import ArgsmeBatchImporter
 from log_config import setup_logging
 from config import Config
 from database import Database
