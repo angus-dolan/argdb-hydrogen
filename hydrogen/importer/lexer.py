@@ -5,9 +5,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class BaseLexer(ABC):
     def __init__(self):
-        self.lexed_tokens = deque()
+        self._lexed_tokens = deque()
+
+    def get_lexed_tokens(self):
+        return self._lexed_tokens
 
     @abstractmethod
     def tokenize(self):
@@ -22,18 +26,17 @@ class Lexer:
         self._lexer_strategy = lexer_strategy
 
     def get_lexed_tokens(self):
-        return self._lexer_strategy.lexed_tokens
+        return self._lexer_strategy.get_lexed_tokens()
 
-    def tokenize_argument(self):
+    def tokenize(self):
         return self._lexer_strategy.tokenize()
 
 
 class ArgsmeLexer(BaseLexer):
     def __init__(self, json_data):
         super().__init__()
-        self.json_data = json_data
-        self.lexed_tokens = deque()
-        self.current_state = 'start'
+        self._json_data = json_data
+        self._current_state = 'start'
         self.STATE_TRANSITIONS = {
             'start': 'premises',
             'premises': 'context',
@@ -56,41 +59,39 @@ class ArgsmeLexer(BaseLexer):
             'conclusion': [ArgsmeToken.CONCLUSION]
         }
 
-
-    def process(self):
-        next_state = self.STATE_TRANSITIONS.get(self.current_state)
+    def _process(self):
+        next_state = self.STATE_TRANSITIONS.get(self._current_state)
         if next_state == 'end':
             return
 
-        self.current_state = next_state
+        self._current_state = next_state
 
-        for token in self.STATE_TOKENS[self.current_state]:
+        for token in self.STATE_TOKENS[self._current_state]:
             nested_keys = token.value
-            value = self.get_token_value(nested_keys)
-            self.lexed_tokens.append(Token(value, token))
+            value = self._get_token_value(nested_keys)
+            self._lexed_tokens.append(Token(value, token))
 
-        self.process()
+        self._process()
 
-    def get_token_value(self, nested_keys):
+    def _get_token_value(self, nested_keys):
         try:
-            root = self.json_data[nested_keys[0]]
+            root = self._json_data[nested_keys[0]]
 
             if len(nested_keys) == 1:
                 return root
 
-            value = self.json_data
+            value = self._json_data
             for key in nested_keys:
-
-                    value = value[key]
+                value = value[key]
 
             return value
         except Exception as e:
-            self.error(f"Lexer: couldn't get token value {e}")
+            self._abort(f"Lexer: couldn't get token value {e}")
 
-    def error(self, error_message):
-        self.current_state = 'end'
+    def _abort(self, error_message):
+        self._current_state = 'end'
         raise Exception(error_message)
 
     def tokenize(self):
-        self.process()
-        return self.lexed_tokens
+        self._process()
+        return self._lexed_tokens
