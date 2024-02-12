@@ -52,6 +52,7 @@ class ArgsmeLexer(BaseLexer):
                 ArgsmeToken.CTX_ACQ_TIME,
                 ArgsmeToken.CTX_SRC_ID,
                 ArgsmeToken.CTX_PREV_ID,
+                ArgsmeToken.CTX_NEXT_ID,
                 ArgsmeToken.CTX_TITLE
             ],
             'id': [ArgsmeToken.ID],

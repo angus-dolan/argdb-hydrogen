@@ -84,9 +84,9 @@ class ArgsmeBatchImporter(BaseImporter):
 
                 parser = ArgsmeParser(lexed_tokens=tokens)
                 parser.parse()
-                sadface_doc = parser.get_parsed_sf_doc()
+                # sadface_doc = parser.get_parsed_sf_doc()
             except Exception as e:
                 # TODO: Add id to batch['failed']
-                print(e)
+                self.abort(f"{e}")
 
             # TODO: Print any failures

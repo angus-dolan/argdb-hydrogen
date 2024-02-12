@@ -41,43 +41,62 @@ class Parser:
 
 
 class ArgsmeParser(BaseParser):
-    def __init__(self, lexed_tokens: list):
+    def __init__(self, lexed_tokens):
         super().__init__()
+        self._builder = SadfaceBuilder()
         self._lexed_tokens = lexed_tokens
         self._current_state = 'start'
-        # TODO: Return lexed_tokens from lexer as a hashmap with ArgsmeToken as key, for O(1)
-        # hashmap = {
-        #     'pending': {},
-        #     'failed': {},
-        #     'success': {}
-        # }
-        # NOTE: Maybe the state transitions should be 'build_new_doc', 'update_existing_doc' etc.
-        # NOTE: Think about mem management, if I've got 1GB in mem, I could end up needing an another GB unless I free the memory as we parse.
         self.STATE_TRANSITIONS = {
-            'start': 'build_node',
-            'update_or_new'
-            'build_node': 'update_or_new',
-            'update': None,
-            'new': None,
-        }
-        self.DYNAMIC_TRANSITIONS = {
+            'start': self.build_node,
             'update_or_new': self.decide_update_or_new,
-            'another_state': self.decide_for_another_state
-        }
-        # self.STATE_TRANSITIONS = {
-        #     'start': 'premises_stance',
-        #     'premises_stance': 'premises_text',
-        #     'premises_text': 'ctx_acq_time',
-        #     'ctx_acq_time': 'ctx_src_id',
-        #     'ctx_src_id': 'ctx_prev_id',
-        #     'ctx_prev_id': 'ctx_title',
-        #     'ctx_title': 'id',
-        #     'id': 'conclusion',
-        #     'conclusion': 'end'
-        # }
-        self.STATE_HANDLERS = {
-            ArgsmeToken.PREMISES_STANCE: 'premises_stance',
+            'new_doc': self.meta_core,
+            'update_doc': self.build_edge,
+            'meta_core': 'end',
+            'build_edge': 'end'
         }
 
+    def decide_update_or_new(self):
+        if self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]:
+            self._current_state = 'update_doc'
+        else:
+            self._current_state = 'new_doc'
+
+    def build_node(self):
+        node = {
+            "id": self._lexed_tokens[ArgsmeToken.ID],
+            "metadata": {
+                "stance": self._lexed_tokens[ArgsmeToken.PREMISES_STANCE],
+            },
+            "text": self._lexed_tokens[ArgsmeToken.PREMISES_TEXT],
+            "type": "atom",
+        }
+        self._builder.with_node(node)
+        self._current_state = 'update_or_new'
+
+    def build_edge(self):
+        edge = {
+          "source_id": self._lexed_tokens[ArgsmeToken.CTX_PREV_ID],
+          "target_id": self._lexed_tokens[ArgsmeToken.CTX.CTX_NEXT_ID]
+        }
+        self._builder.with_edge(edge)
+        self._current_state = 'end'
+
+    def meta_core(self):
+        self._builder.with_metadata_core("id", self._lexed_tokens[ArgsmeToken.CTX_SRC_ID])
+        self._builder.with_metadata_core("created", self._lexed_tokens[ArgsmeToken.CTX_ACQ_TIME])
+        self._builder.with_metadata_core("edited", self._lexed_tokens[ArgsmeToken.CTX_ACQ_TIME])
+        self._builder.with_metadata_core("title", self._lexed_tokens[ArgsmeToken.CTX_TITLE])
+        self._current_state = 'end'
+
+    def process(self):
+        if self._current_state == 'end':
+
+            return
+        next_state = self.STATE_TRANSITIONS.get(self._current_state)
+
+        next_state()
+        self.process()
+
     def parse(self):
-        pass
+        self.process()
+        print('')
