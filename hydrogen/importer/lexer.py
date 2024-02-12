@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from .models import *
-from collections import deque
 import logging
 
 logger = logging.getLogger(__name__)
@@ -8,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class BaseLexer(ABC):
     def __init__(self):
-        self._lexed_tokens = deque()
+        self._lexed_tokens = {}
 
     def get_lexed_tokens(self):
         return self._lexed_tokens
@@ -69,7 +68,7 @@ class ArgsmeLexer(BaseLexer):
         for token in self.STATE_TOKENS[self._current_state]:
             nested_keys = token.value
             value = self._get_token_value(nested_keys)
-            self._lexed_tokens.append(Token(value, token))
+            self._lexed_tokens[token] = value
 
         self._process()
 

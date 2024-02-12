@@ -46,17 +46,23 @@ class ArgsmeParser(BaseParser):
         self._lexed_tokens = lexed_tokens
         self._current_state = 'start'
         # TODO: Return lexed_tokens from lexer as a hashmap with ArgsmeToken as key, for O(1)
+        # hashmap = {
+        #     'pending': {},
+        #     'failed': {},
+        #     'success': {}
+        # }
         # NOTE: Maybe the state transitions should be 'build_new_doc', 'update_existing_doc' etc.
         # NOTE: Think about mem management, if I've got 1GB in mem, I could end up needing an another GB unless I free the memory as we parse.
-        self.DYNAMIC_TRANSITIONS = {
-            'update_or_new': self.decide_update_or_new,
-            'another_state': self.decide_for_another_state
-        }
         self.STATE_TRANSITIONS = {
             'start': 'build_node',
+            'update_or_new'
             'build_node': 'update_or_new',
             'update': None,
             'new': None,
+        }
+        self.DYNAMIC_TRANSITIONS = {
+            'update_or_new': self.decide_update_or_new,
+            'another_state': self.decide_for_another_state
         }
         # self.STATE_TRANSITIONS = {
         #     'start': 'premises_stance',
