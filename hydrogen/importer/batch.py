@@ -39,13 +39,17 @@ class ArgsmeBatchImporter(BaseImporter):
 
     def load_argsme_batches(self):
         def init_current_batch():
-            return deque()
+            return {
+                'pending': deque(),
+                'completed': {},
+                'failed': {}
+            }
 
         current_batch = init_current_batch()
         current_batch_size = 0
 
         def save_pending_argument(pending_arg):
-            current_batch.append(pending_arg)
+            current_batch['pending'].append(pending_arg)
 
         # TODO: Investigate Stream-Based Processing and Filtering at Parse Time with ijson to improve performance
         try:
@@ -74,19 +78,23 @@ class ArgsmeBatchImporter(BaseImporter):
             self.abort(f"Failed to load batches: {e}")
 
     def process_argsme_batch(self, batch):
-        while batch:
-            argument = batch.popleft()
+        while batch['pending']:
+            argument = batch['pending'].popleft()
 
             try:
                 lexer = ArgsmeLexer(json_data=argument)
                 lexer.tokenize()
                 tokens = lexer.get_lexed_tokens()
 
-                parser = ArgsmeParser(lexed_tokens=tokens)
-                parser.parse()
-                # sadface_doc = parser.get_parsed_sf_doc()
-            except Exception as e:
-                # TODO: Add id to batch['failed']
-                self.abort(f"{e}")
+                parser = ArgsmeParser(batch=batch, lexed_tokens=tokens)
+                sf_doc = parser.parse()
+                batch['completed'][sf_doc['metadata']['core']['id']] = sf_doc
+
+            except Exception as failed_doc:
+                self.abort(failed_doc)
+                # batch['failed'] =
 
             # TODO: Print any failures
+
+        for argument in batch['completed']:
+            print(argument.value)

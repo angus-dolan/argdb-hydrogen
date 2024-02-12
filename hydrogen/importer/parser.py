@@ -1,18 +1,13 @@
-from .models.tokens import Token, ArgsmeToken
+from .models.tokens import ArgsmeToken
 from .builder import SadfaceBuilder
 from abc import ABC, abstractmethod
-import sys
 import uuid
 import hashlib
-import json
 
 
 class BaseParser(ABC):
     def __init__(self):
-        self._parsed_sf_doc = None
-
-    def get_parsed_sf_doc(self):
-        return self._parsed_sf_doc
+        pass
 
     def _string_to_uuid(string):
         if string == "":
@@ -33,22 +28,20 @@ class Parser:
     def set_parser_strategy(self, parser_strategy: BaseParser):
         self._parser_strategy = parser_strategy
 
-    def get_parsed_sf_doc(self):
-        return self._parser_strategy.get_parsed_sf_doc()
-
     def parse(self):
         return self._parser_strategy.parse()
 
 
 class ArgsmeParser(BaseParser):
-    def __init__(self, lexed_tokens):
+    def __init__(self, batch, lexed_tokens):
         super().__init__()
         self._builder = SadfaceBuilder()
+        self._batch = batch
         self._lexed_tokens = lexed_tokens
         self._current_state = 'start'
         self.STATE_TRANSITIONS = {
-            'start': self.build_node,
-            'update_or_new': self.decide_update_or_new,
+            'start': self.decide_update_or_new,
+            'build_node': self.decide_update_or_new,
             'new_doc': self.meta_core,
             'update_doc': self.build_edge,
             'meta_core': 'end',
@@ -56,10 +49,16 @@ class ArgsmeParser(BaseParser):
         }
 
     def decide_update_or_new(self):
-        if self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]:
-            self._current_state = 'update_doc'
-        else:
+        prev_id = self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]
+
+        if not prev_id:
             self._current_state = 'new_doc'
+            return
+
+        src_id = self._lexed_tokens[ArgsmeToken.CTX_SRC_ID]
+        document = self._batch['completed'][src_id]
+        self._builder.with_existing_document(document)
+        self._current_state = 'update_doc'
 
     def build_node(self):
         node = {
@@ -82,16 +81,16 @@ class ArgsmeParser(BaseParser):
         self._current_state = 'end'
 
     def meta_core(self):
-        self._builder.with_metadata_core("id", self._lexed_tokens[ArgsmeToken.CTX_SRC_ID])
-        self._builder.with_metadata_core("created", self._lexed_tokens[ArgsmeToken.CTX_ACQ_TIME])
-        self._builder.with_metadata_core("edited", self._lexed_tokens[ArgsmeToken.CTX_ACQ_TIME])
-        self._builder.with_metadata_core("title", self._lexed_tokens[ArgsmeToken.CTX_TITLE])
+        self._builder.with_meta_core("id", self._lexed_tokens[ArgsmeToken.CTX_SRC_ID])
+        self._builder.with_meta_core("created", self._lexed_tokens[ArgsmeToken.CTX_ACQ_TIME])
+        self._builder.with_meta_core("edited", self._lexed_tokens[ArgsmeToken.CTX_ACQ_TIME])
+        self._builder.with_meta_core("title", self._lexed_tokens[ArgsmeToken.CTX_TITLE])
         self._current_state = 'end'
 
     def process(self):
         if self._current_state == 'end':
-
             return
+
         next_state = self.STATE_TRANSITIONS.get(self._current_state)
 
         next_state()
@@ -99,4 +98,11 @@ class ArgsmeParser(BaseParser):
 
     def parse(self):
         self.process()
-        print('')
+
+        parsed_document = (self._builder.build())
+        valid, error_messages = self._builder.validate()
+
+        # if valid:
+        return parsed_document
+        # else:
+        #   parser.abort(f"Document is not valid. Errors: {error_messages}")

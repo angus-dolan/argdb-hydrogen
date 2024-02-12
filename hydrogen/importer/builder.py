@@ -8,11 +8,11 @@ class SadfaceBuilder:
         self.sadface = Sadface(document)
         return self
 
-    def with_metadata_core(self, key, value):
+    def with_meta_core(self, key, value):
         self.sadface.set_core_metadata(key, value)
         return self
 
-    def with_metadata_other(self, option, key, value):
+    def with_meta_other(self, option, key, value):
         self.sadface.set_other_metadata(option, key, value)
         return self
 
