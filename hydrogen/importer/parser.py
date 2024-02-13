@@ -74,14 +74,13 @@ class ArgsmeParser(BaseParser):
         self._current_state = 'end'
 
     def restore(self):
-        prev_id = self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]
+        src_id = self._lexed_tokens[ArgsmeToken.CTX_SRC_ID]
+        document = self._batch.completed[src_id]
+        new_document = document is None
 
-        if not prev_id:
+        if new_document:
             self._current_state = 'new_doc'
             return
-
-        src_id = self._lexed_tokens[ArgsmeToken.CTX_SRC_ID]
-        document = self._batch['completed'][src_id]
 
         self._builder.with_existing_document(document)
         self._current_state = 'update_doc'
@@ -102,7 +101,7 @@ class ArgsmeParser(BaseParser):
         self.process()
 
         parsed_document = (self._builder.build())
-        valid, error_messages = self._builder.validate()
+        # valid, error_messages = self._builder.validate()
 
         # if valid:
         return parsed_document

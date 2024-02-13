@@ -249,3 +249,172 @@ Using json.load and jq is around 60% faster than streaming because it avoids str
 loads the data directly into memory and isn't buffered. Loading a 900MB file in 6 seconds is acceptable
 for our use case. For files larger than the ArgsMe dataset, streaming and batching may be necessary
 to manage memory usage and to accommodate larger datasets.
+
+### Tue 13th Feb
+
+Turns out like I thought, it wasn't really my lexer and parser algorithm that was slow. But the database calls in the parser.
+But I've rebuilt the parser as a recursive moore machine. It's more performant and easier to understand now.
+
+Upon running pyinstrument I noticed that there was a performance increase but it was still slower than expected. After diagnosing I removed all database initialisation code and the compiler was able to run in 0.019s for 10 argsme json arguments.
+
+Before removing database:
+```
+0.150 <module>  hydrogen.py:1
+├─ 0.146 <module>  importer/__init__.py:1
+│  ├─ 0.120 <module>  importer/emitter.py:1
+│  │  └─ 0.120 <module>  database.py:1
+│  │     ├─ 0.077 <module>  sqlalchemy/__init__.py:1
+│  │     │     [43 frames hidden]  sqlalchemy, <built-in>, importlib, em...
+│  │     ├─ 0.031 <module>  sqlalchemy/ext/declarative/__init__.py:1
+│  │     │     [21 frames hidden]  sqlalchemy, <built-in>
+│  │     ├─ 0.007 create_engine  <string>:1
+│  │     │     [7 frames hidden]  <string>, sqlalchemy
+│  │     └─ 0.004 Node.__init__  sqlalchemy/orm/decl_api.py:56
+│  │           [9 frames hidden]  sqlalchemy, <string>
+│  └─ 0.023 <module>  importer/batch.py:1
+│     ├─ 0.015 <module>  importer/lexer.py:1
+│     │  ├─ 0.012 <module>  importer/models/__init__.py:1
+│     │  │  └─ 0.011 <module>  importer/models/sadface.py:1
+│     │  │     └─ 0.011 <module>  sadface/__init__.py:1
+│     │  │           [9 frames hidden]  sadface, configparser, datetime, <bui...
+│     │  └─ 0.002 <module>  logging/__init__.py:1
+│     ├─ 0.003 <module>  ijson/__init__.py:1
+│     │     [2 frames hidden]  ijson
+│     └─ 0.003 <module>  importer/parser.py:1
+│        └─ 0.003 <module>  hashlib.py:1
+│              [2 frames hidden]  hashlib, <built-in>
+└─ 0.002 Database.initialize  database.py:104
+   └─ 0.002 MetaData.create_all  sqlalchemy/sql/schema.py:4905
+         [2 frames hidden]  sqlalchemy
+```
+
+After removing database from main and importer/__init__ which included the emitter:
+```
+0.019 <module>  hydrogen.py:1
+├─ 0.017 <module>  importer/__init__.py:1
+│  └─ 0.017 <module>  importer/batch.py:1
+│     ├─ 0.012 <module>  importer/lexer.py:1
+│     │  ├─ 0.010 <module>  importer/models/__init__.py:1
+│     │  │  ├─ 0.009 <module>  importer/models/sadface.py:1
+│     │  │  │  └─ 0.009 <module>  sadface/__init__.py:1
+│     │  │  │        [39 frames hidden]  sadface, configparser, <frozen abc>, ...
+│     │  │  └─ 0.001 len  <built-in>
+│     │  └─ 0.002 <module>  logging/__init__.py:1
+│     │        [12 frames hidden]  logging, re
+│     ├─ 0.003 <module>  importer/parser.py:1
+│     │  └─ 0.003 <module>  hashlib.py:1
+│     │        [5 frames hidden]  hashlib, <built-in>
+│     └─ 0.002 <module>  ijson/__init__.py:1
+│           [9 frames hidden]  ijson, importlib, <built-in>, decimal...
+├─ 0.001 open_code  <built-in>
+└─ 0.001 ArgsmeBatchImporter.batch_import  importer/batch.py:34
+   └─ 0.001 ArgsmeBatchImporter.load_argsme_batches  importer/batch.py:40
+      └─ 0.001 ArgsmeBatchImporter.process_argsme_batch  importer/batch.py:80
+         └─ 0.001 ArgsmeParser.parse  importer/parser.py:101
+            └─ 0.001 ArgsmeParser.process  importer/parser.py:89
+               └─ 0.001 ArgsmeParser.build_node  importer/parser.py:50
+                  └─ 0.001 ArgsmeToken.__hash__  enum.py:1224
+                        [2 frames hidden]  enum, <built-in>
+```
+
+Therefore, after the refactoring and performance improvements. The database was causing around 87% of the runtime. From this I can infer that the refactoring was worth it. Not only for the code quality improvements, but the move to a 1GB batch importer and memory only processing with no database calls means I can do an expensive database transaction once all the data has been performantly processed in memory.
+
+Problem with argsme dataset found?
+```
+    def restore(self):
+        prev_id = self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]
+
+        if not prev_id:
+            self._current_state = 'new_doc'
+            return
+
+        src_id = self._lexed_tokens[ArgsmeToken.CTX_SRC_ID]
+        document = self._batch['completed'][src_id]
+
+        self._builder.with_existing_document(document)
+        self._current_state = 'update_doc'
+```
+Using this as a means to update existing documents doesnt seem to be reliable with the dataset as ID's seem to jump around and arent in a linear fashion
+
+I think a potential fix might be initialising the batch['completed'] with sourceIds extracted using jq before lexing and parsing.
+
+But then that breaks the moore machine state transition logic as I'll probably need to use the tokens present in methods like build_edge etc.
+
+Implimented the above
+- Parser restore() is actually cleaner and I didn't need to change any state transition logic
+- I simply look if the current value in batch['completed'] is none
+- PyJQ was far too slow so instead set batch['completed'] as I'm streaming in the data with ijson
+- The compiler seems to work fully now with 59k arguments processed.
+
+Same dataset as previous examples for comparison, barely any performance drop.
+
+```
+0.024 <module>  hydrogen.py:1
+├─ 0.022 <module>  importer/__init__.py:1
+│  └─ 0.022 <module>  importer/batch.py:1
+│     ├─ 0.014 <module>  importer/lexer.py:1
+│     │  ├─ 0.012 <module>  importer/models/__init__.py:1
+│     │  │  ├─ 0.010 <module>  importer/models/sadface.py:1
+│     │  │  │  └─ 0.010 <module>  sadface/__init__.py:1
+│     │  │  │        [32 frames hidden]  sadface, <built-in>, configparser, re...
+│     │  │  ├─ 0.001 BufferedReader.read  <built-in>
+│     │  │  └─ 0.001 [self]  importer/models/__init__.py
+│     │  ├─ 0.001 loads  <built-in>
+│     │  └─ 0.001 <module>  logging/__init__.py:1
+│     │        [11 frames hidden]  logging, re
+│     ├─ 0.003 <module>  ijson/__init__.py:1
+│     │     [9 frames hidden]  ijson, decimal, <built-in>, importlib
+│     ├─ 0.002 <module>  importer/parser.py:1
+│     │  └─ 0.002 <module>  hashlib.py:1
+│     │        [5 frames hidden]  hashlib, <built-in>
+│     ├─ 0.001 BufferedReader.read  <built-in>
+│     └─ 0.001 <module>  pyjq.py:1
+├─ 0.001 setup_logging  log_config.py:4
+│  └─ 0.001 basicConfig  logging/__init__.py:1953
+│        [3 frames hidden]  logging
+└─ 0.001 ArgsmeBatchImporter.batch_import  importer/batch.py:35
+   └─ 0.001 ArgsmeBatchImporter.load_argsme_batches  importer/batch.py:41
+      └─ 0.001 ArgsmeBatchImporter.process_argsme_batch  importer/batch.py:85
+         └─ 0.001 ArgsmeParser.parse  importer/parser.py:100
+            └─ 0.001 SadfaceBuilder.validate  importer/builder.py:31
+               └─ 0.001 Sadface.validate  importer/models/sadface.py:44
+                  └─ 0.001 verify  sadface/validation.py:254
+                        [4 frames hidden]  sadface, uuid, <built-in>
+```
+
+41 seconds to import entire argsme dataset, not bad.
+```
+41.081 <module>  hydrogen.py:1
+└─ 41.056 ArgsmeBatchImporter.batch_import  importer/batch.py:35
+   └─ 41.056 ArgsmeBatchImporter.load_argsme_batches  importer/batch.py:41
+      ├─ 34.758 ArgsmeBatchImporter.process_argsme_batch  importer/batch.py:85
+      │  ├─ 26.485 ArgsmeParser.parse  importer/parser.py:100
+      │  │  ├─ 23.915 SadfaceBuilder.validate  importer/builder.py:31
+      │  │  │  └─ 23.830 Sadface.validate  importer/models/sadface.py:44
+      │  │  │     └─ 23.731 verify  sadface/validation.py:254
+      │  │  │           [15 frames hidden]  sadface, uuid, <built-in>
+      │  │  └─ 2.314 ArgsmeParser.process  importer/parser.py:88
+      │  │     ├─ 0.764 ArgsmeParser.build_node  importer/parser.py:50
+      │  │     ├─ 0.482 ArgsmeParser.build_edge  importer/parser.py:61
+      │  │     └─ 0.464 ArgsmeParser.restore  importer/parser.py:76
+      │  ├─ 5.570 ArgsmeLexer.tokenize  importer/lexer.py:95
+      │  │  └─ 5.480 ArgsmeLexer._process  importer/lexer.py:62
+      │  │     ├─ 3.858 ArgsmeLexer._process  importer/lexer.py:62
+      │  │     │  ├─ 1.226 ArgsmeLexer._process  importer/lexer.py:62
+      │  │     │  │  └─ 0.646 ArgsmeLexer._process  importer/lexer.py:62
+      │  │     │  ├─ 0.970 [self]  importer/lexer.py
+      │  │     │  ├─ 0.761 ArgsmeLexer._get_token_value  importer/lexer.py:76
+      │  │     │  │  └─ 0.657 [self]  importer/lexer.py
+      │  │     │  └─ 0.566 property.__get__  enum.py:193
+      │  │     ├─ 0.716 ArgsmeLexer._get_token_value  importer/lexer.py:76
+      │  │     │  └─ 0.681 [self]  importer/lexer.py
+      │  │     └─ 0.476 [self]  importer/lexer.py
+      │  ├─ 1.022 print  <built-in>
+      │  ├─ 0.632 [self]  importer/batch.py
+      │  ├─ 0.511 ArgsmeParser.__init__  importer/parser.py:36
+      │  └─ 0.489 ArgsmeLexer.__init__  importer/lexer.py:35
+      │     └─ 0.438 [self]  importer/lexer.py
+      ├─ 3.575 [self]  importer/batch.py
+      └─ 2.522 dumps  json/__init__.py:183
+            [3 frames hidden]  json
+```

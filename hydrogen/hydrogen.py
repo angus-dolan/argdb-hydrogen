@@ -1,16 +1,16 @@
 from importer import ArgsmeBatchImporter
 from log_config import setup_logging
 from config import Config
-from database import Database
+# from database import Database
 
 config = Config()
-database = Database()
+# database = Database()
 
 setup_logging('hydrogen.log')
 
 if __name__ == "__main__":
     config.initialize()
-    database.initialize()
+    # database.initialize()
 
-    importer = ArgsmeBatchImporter('./importer/example_data/argsme_grouped.json')
+    importer = ArgsmeBatchImporter('./importer/example_data/args-me.json')
     importer.batch_import()

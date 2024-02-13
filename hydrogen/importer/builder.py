@@ -4,6 +4,9 @@ class SadfaceBuilder:
     def __init__(self):
         self.sadface = Sadface()
 
+    def id(self):
+        return self.sadface.document['metadata']['core']['id']
+
     def with_existing_document(self, document):
         self.sadface = Sadface(document)
         return self
@@ -32,4 +35,4 @@ class SadfaceBuilder:
         return self.sadface.validate()
 
     def build(self):
-        return self.sadface.document
+        return self.sadface
