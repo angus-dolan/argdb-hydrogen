@@ -40,25 +40,12 @@ class ArgsmeParser(BaseParser):
         self._lexed_tokens = lexed_tokens
         self._current_state = 'start'
         self.STATE_TRANSITIONS = {
-            'start': self.decide_update_or_new,
-            'build_node': self.decide_update_or_new,
+            'start': '',
             'new_doc': self.meta_core,
             'update_doc': self.build_edge,
             'meta_core': 'end',
             'build_edge': 'end'
         }
-
-    def decide_update_or_new(self):
-        prev_id = self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]
-
-        if not prev_id:
-            self._current_state = 'new_doc'
-            return
-
-        src_id = self._lexed_tokens[ArgsmeToken.CTX_SRC_ID]
-        document = self._batch['completed'][src_id]
-        self._builder.with_existing_document(document)
-        self._current_state = 'update_doc'
 
     def build_node(self):
         node = {
@@ -70,12 +57,11 @@ class ArgsmeParser(BaseParser):
             "type": "atom",
         }
         self._builder.with_node(node)
-        self._current_state = 'update_or_new'
 
     def build_edge(self):
         edge = {
           "source_id": self._lexed_tokens[ArgsmeToken.CTX_PREV_ID],
-          "target_id": self._lexed_tokens[ArgsmeToken.CTX.CTX_NEXT_ID]
+          "target_id": self._lexed_tokens[ArgsmeToken.ID]
         }
         self._builder.with_edge(edge)
         self._current_state = 'end'
@@ -87,13 +73,29 @@ class ArgsmeParser(BaseParser):
         self._builder.with_meta_core("title", self._lexed_tokens[ArgsmeToken.CTX_TITLE])
         self._current_state = 'end'
 
+    def restore(self):
+        prev_id = self._lexed_tokens[ArgsmeToken.CTX_PREV_ID]
+
+        if not prev_id:
+            self._current_state = 'new_doc'
+            return
+
+        src_id = self._lexed_tokens[ArgsmeToken.CTX_SRC_ID]
+        document = self._batch['completed'][src_id]
+
+        self._builder.with_existing_document(document)
+        self._current_state = 'update_doc'
+
     def process(self):
-        if self._current_state == 'end':
+        if self._current_state == 'start':
+            self.restore()
+            self.build_node()
+        elif self._current_state == 'end':
             return
 
         next_state = self.STATE_TRANSITIONS.get(self._current_state)
-
         next_state()
+
         self.process()
 
     def parse(self):

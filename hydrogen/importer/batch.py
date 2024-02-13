@@ -94,7 +94,5 @@ class ArgsmeBatchImporter(BaseImporter):
                 self.abort(failed_doc)
                 # batch['failed'] =
 
-            # TODO: Print any failures
+        print('')
 
-        for argument in batch['completed']:
-            print(argument.value)
