@@ -33,7 +33,7 @@ class Parser:
 
 
 class ArgsmeParser(BaseParser):
-    def __init__(self, batch, lexed_tokens):
+    def __init__(self, batch=None, lexed_tokens=None):
         super().__init__()
         self._builder = SadfaceBuilder()
         self._batch = batch
@@ -46,6 +46,12 @@ class ArgsmeParser(BaseParser):
             'meta_core': 'end',
             'build_edge': 'end'
         }
+
+    def set_batch(self, batch):
+        self._batch = batch
+
+    def set_tokens(self, lexed_tokens):
+        self._lexed_tokens = lexed_tokens
 
     def build_node(self):
         node = {
