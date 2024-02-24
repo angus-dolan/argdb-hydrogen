@@ -47,8 +47,11 @@ class ArgsmeBatchImporter(BaseImporter):
                 self.completed[src_id] = None
             self.pending.append(pending_arg)
 
-        def get_completed_argument(self, src_id):
+        def get_completed_arguments(self):
             return self.completed
+
+        def get_completed_argument(self, src_id):
+            return self.completed[src_id]
 
         def has_pending(self):
             return len(self.pending) > 0
