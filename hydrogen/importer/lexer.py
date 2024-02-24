@@ -62,6 +62,7 @@ class ArgsmeLexer(BaseLexer):
     def _process(self):
         next_state = self.STATE_TRANSITIONS.get(self._current_state)
         if next_state == 'end':
+            self._current_state = 'end'
             return
 
         self._current_state = next_state
