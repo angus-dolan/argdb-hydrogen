@@ -1,25 +1,26 @@
 from database import Database, Raw
-import json 
+import json
 
 db = Database()
 
+
 class Emitter:
-  def __init__(self, uuid, doc):
-    self.document = doc
-    self.uuid = uuid
+    def __init__(self, uuid=None, doc=None):
+        self.document = doc
+        self.uuid = uuid
 
-  def set_uuid(self, uuid):
-    self.uuid = uuid
+    def set_uuid(self, uuid):
+        self.uuid = uuid
 
-  def set_document(self, doc):
-    self.document = doc
+    def set_document(self, doc):
+        self.document = doc
 
-  def emit(self):
-    result = db.raw.get(self.uuid)
-    
-    if result:
-      return db.raw.update(self.uuid, json.dumps(self.document))
-    
-    return db.raw.add(Raw(uuid=self.uuid, data=json.dumps(self.document)))
-    
-    
+    def emit(self):
+        exists = db.raw.get(uuid=self.uuid)
+        payload = json.dumps(self.document)
+
+        if exists:
+            return db.raw.update(uuid=self.uuid, payload=payload)
+
+        new_doc = Raw(uuid=self.uuid, data=payload)
+        return db.raw.add(payload=new_doc)

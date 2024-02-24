@@ -32,7 +32,7 @@ class Lexer:
 
 
 class ArgsmeLexer(BaseLexer):
-    def __init__(self, json_data):
+    def __init__(self, json_data=None):
         super().__init__()
         self._json_data = json_data
         self._current_state = 'start'
@@ -58,6 +58,9 @@ class ArgsmeLexer(BaseLexer):
             'id': [ArgsmeToken.ID],
             'conclusion': [ArgsmeToken.CONCLUSION]
         }
+
+    def set_argument(self, json_data):
+        self._json_data = json_data
 
     def _process(self):
         next_state = self.STATE_TRANSITIONS.get(self._current_state)
