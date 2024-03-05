@@ -418,3 +418,28 @@ Same dataset as previous examples for comparison, barely any performance drop.
       └─ 2.522 dumps  json/__init__.py:183
             [3 frames hidden]  json
 ```
+
+### Sat 24th Feb
+- Prototype vector index [#1](https://github.com/angus-dolan/argdb-hydrogen/pull/1)
+- Improved importer and emitter [#2](https://github.com/angus-dolan/argdb-hydrogen/pull/2)
+
+### Sun 3rd March
+
+- Worked on the tokenization for the search engine
+- Idea is to use when indexing and handling search queries
+
+
+- `remove_links`
+  - Uses regex to remove all links (argsme dataset tends to have a lot)
+- `remove_stopwords`
+  - Uses the nltk english stopwords dataset without the nltk dependency 
+- `remove_punctuation`
+  - Uses the same punctuations as `string.punctuation`
+  - Used a single pointer
+  - Decided better approach was adding spaces before/after punc characters before splitting, then its a simple removal of punc tokens.
+  - Was useful for handling text like: "Exercise(the prime" => ["exercise", "(", "the"]
+  - I'm hoping n-grams will be the way to handle bad formatting, e.g. "exercisetheprime" (with no spaces)
+- Next:
+  - Decide size of N-Grams
+  - Build N-Gram sliding window
+  - Inverted index
