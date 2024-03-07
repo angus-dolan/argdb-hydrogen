@@ -425,8 +425,9 @@ Same dataset as previous examples for comparison, barely any performance drop.
 
 ### Sun 3rd March
 
-- Worked on the tokenization for the search engine
-- Idea is to use when indexing and handling search queries
+[#3](https://github.com/angus-dolan/argdb-hydrogen/pull/3)
+
+Worked on the search engine parser.
 
 
 - `remove_links`
@@ -443,3 +444,46 @@ Same dataset as previous examples for comparison, barely any performance drop.
   - Decide size of N-Grams
   - Build N-Gram sliding window
   - Inverted index
+
+### Thu 7th March
+
+[#4](https://github.com/angus-dolan/argdb-hydrogen/pull/4/)
+
+- Investigated building a redis database clone from scratch, decided it wasn't worth the extra effort.
+- Added a docker-compose to start a redis service for the inverted index.
+- Built a `SearchEngine` class with `add_document` and `search` methods.
+- Implimented edge n-grams in the search indexer.
+
+Search results still return the best documents first with edge n-grams compared to just concordance. But more documents are returned and they are irellevant. This was expected, since n-grams will generate 100s of terms for a document, so its more likely to get matched. I'm hoping this will fix itself with more documents than just 7. Then it can be a case of tweaking the size of N and limiting results or using a relevance scoring algorithm like Okapi BM25.
+
+Example search results comparison:
+
+**Concordance**:
+```shell
+Enter Search Term: Captcha
+Relevance: 0.19245008972987526, Document: Why You Shouldnt roll your own CAPTCHA At a TechEd I attended a few years ago I was watching a prese...
+Relevance: 0.13130643285972254, Document: Why CAPTCHA Never Use Numbers 0 1 5 7 Interestingly this sort of question pops up a lot in my referr...
+```
+**Edge n-grams:**
+```shell
+Enter Search Term: Captcha
+# Same docs as concordance
+Relevance: 0.3030457633656632, Document: Why CAPTCHA Never Use Numbers 0 1 5 7 Interestingly this sort of question pops up a lot in my referr...
+Relevance: 0.17560468218497577, Document: Why You Shouldnt roll your own CAPTCHA At a TechEd I attended a few years ago I was watching a prese...
+# Search pollution
+Relevance: 0.08754693987147766, Document: The Great Benefit of Test Driven Development Nobody Talks About The feeling of productivity because ...
+Relevance: 0.044086671417740544, Document: Richard Stallman to visit Australia Im not usually one to promote events and the like unless I feel ...
+Relevance: 0.04300329525375306, Document: At Scale You Will Hit Every Performance Issue I used to think I knew a bit about performance scalabi...
+Relevance: 0.030556616567607043, Document: Setting up GIT to use a Subversion SVN style workflow Moving from Subversion SVN to GIT can be a lit...
+Relevance: 0.016356122383769687, Document: MySQL Backups Done Easily One thing that comes up a lot on sites like Stackoverflow and the like is ...
+```
+
+Edge n-grams will be great for building an autocomplete. As mentioned I think this results pollution will fix itself with more data.
+
+Next:
+- Persist inverted index in redis
+- Sharding larger documents
+- Relevance/Boosting
+- Build a dockerized API service
+- Search method performance improvements, see line 35 of `engine.py` in this PR
+- Connect importer to search engine, I want to follow IBM research and mark arguments > 210 characters as low quality, maybe not even index them. Would make a good discussion point about argsme dataset in write up.
