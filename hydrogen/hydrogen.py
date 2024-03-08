@@ -10,7 +10,7 @@ setup_logging('hydrogen.log')
 
 if __name__ == "__main__":
     config.initialize()
-    database.initialize()
+    # database.initialize()
 
-    importer = ArgsmeBatchImporter('./importer/example_data/args-me.json')
-    importer.batch_import()
+    # importer = ArgsmeBatchImporter('./importer/example_data/args-me.json')
+    # importer.batch_import()

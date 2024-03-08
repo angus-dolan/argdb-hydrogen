@@ -1,5 +1,6 @@
 from parser import SearchParser
 from index import SearchIndex
+from collections import Counter
 
 
 class SearchEngine:
@@ -9,37 +10,25 @@ class SearchEngine:
         self.documents = {}
         self.inverted_index = {}
 
-    def add_document(self, doc_id, text):
-        self.documents[doc_id] = text
-
-        parsed_text = self.search_parser.parse(text)
-        concordance = {}
+    def generate_concordance(self, parsed_text):
+        concordance = Counter()
         for token in parsed_text:
             edge_ngrams = self.index.generate_edge_ngrams(token)
-            for ngram in edge_ngrams:
-                if ngram in concordance:
-                    concordance[ngram] += 1
-                else:
-                    concordance[ngram] = 1
-        self.inverted_index[doc_id] = concordance
+            concordance.update(edge_ngrams)
+        return concordance
+
+    def add_document(self, doc_id, text):
+        self.documents[doc_id] = text  # TODO: Remove once connected to datastore
+        parsed_text = self.search_parser.parse(text)
+        concordance = self.generate_concordance(parsed_text)
+
+        self.index.add_to_index(doc_id, concordance)
 
     def search(self, query):
         parsed_query = self.search_parser.parse(query)
-        query_concordance = {}
-        for token in parsed_query:
-            edge_ngrams = self.index.generate_edge_ngrams(token)
-            for ngram in edge_ngrams:
-                query_concordance[ngram] = query_concordance.get(ngram, 0) + 1
-        matches = []
+        query_concordance = self.generate_concordance(parsed_query)
 
-        # TODO: This won't scale well, will need caching and DSA for checking what documents are worth searching
-        for doc_id, concordance in self.inverted_index.items():
-            relation = self.index.relation(query_concordance, concordance)
-            if relation > 0:
-                matches.append((relation, self.documents[doc_id]))
-        matches.sort(reverse=True)
-
-        return matches
+        return self.index.get_matches(query_concordance)
 
 
 if __name__ == "__main__":
@@ -58,8 +47,10 @@ if __name__ == "__main__":
     for doc_id, text in documents.items():
         engine.add_document(doc_id, text)
 
-    query = input("Enter Search Term: ")
-    results = engine.search(query)
+    # query = input("Enter Search Term: ")
+    # results = engine.search(query)
+
+    results = engine.search("captcha")
 
     for relation, doc in results:
         print(f"Relevance: {relation}, Document: {doc[:100]}...")
