@@ -1,4 +1,4 @@
-from database import Database, Raw
+from database import Database, Arguments
 import json
 
 db = Database()
@@ -16,11 +16,11 @@ class Emitter:
         self.document = doc
 
     def emit(self):
-        exists = db.raw.get(uuid=self.uuid)
+        exists = db.arguments.get(uuid=self.uuid)
         payload = json.dumps(self.document)
 
         if exists:
-            return db.raw.update(uuid=self.uuid, payload=payload)
+            return db.arguments.update(uuid=self.uuid, payload=payload)
 
-        new_doc = Raw(uuid=self.uuid, data=payload)
-        return db.raw.add(payload=new_doc)
+        new_doc = Arguments(uuid=self.uuid, data=payload)
+        return db.arguments.add(payload=new_doc)
