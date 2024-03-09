@@ -23,20 +23,20 @@ Base = declarative_base()
 
 # TODO: Implement importer_failed and importer_lq persistence in importer
 
-class Arguments(Base):
+class ArgumentModel(Base):
     __tablename__ = 'arguments'
     id = Column(Integer, primary_key=True)
     uuid = Column(String, unique=True)
     data = Column(String)
 
 
-class ImporterFailed(Base):
+class ImporterFailedModel(Base):
     __tablename__ = 'importer_failed'
     id = Column(Integer, primary_key=True)
     error_detail = Column(Text)
 
 
-class ImporterLQ(Base):
+class ImporterLqModel(Base):
     __tablename__ = 'importer_lq'
     id = Column(Integer, primary_key=True)
     argument_id = Column(Integer)
@@ -79,7 +79,7 @@ class BaseRepository(ABC):
 
 class ArgumentsRepository(BaseRepository):
     def __init__(self, session):
-        super().__init__(session, Arguments)
+        super().__init__(session, ArgumentModel)
 
     def add(self, **kwargs):
         payload = kwargs['payload']
@@ -112,7 +112,7 @@ class ArgumentsRepository(BaseRepository):
 
 class ImporterFailedRepository(BaseRepository):
     def __init__(self, session):
-        super().__init__(session, ImporterFailed)
+        super().__init__(session, ImporterFailedModel)
 
     def add(self, **kwargs):
         payload = kwargs['payload']
@@ -142,9 +142,9 @@ class ImporterFailedRepository(BaseRepository):
                 self.session.delete(item)
 
 
-class ImporterLQRepository(BaseRepository):
+class ImporterLqRepository(BaseRepository):
     def __init__(self, session):
-        super().__init__(session, ImporterLQ)
+        super().__init__(session, ImporterLqModel)
 
     def add(self, **kwargs):
         payload = kwargs['payload']
@@ -179,7 +179,7 @@ class Database:
         self.session = Session()
         self.arguments = ArgumentsRepository(self.session)
         self.importer_failed = ImporterFailedRepository(self.session)
-        self.importer_lq = ImporterLQRepository(self.session)
+        self.importer_lq = ImporterLqRepository(self.session)
 
     def initialize(self):
         Base.metadata.create_all(bind=engine)

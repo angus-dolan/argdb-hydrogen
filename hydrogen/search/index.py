@@ -44,6 +44,8 @@ class SearchIndex:
             total += count ** 2
         return math.sqrt(total)
 
+    # TODO: Refactor this, call concordance1 'query_concordance'
+    # TODO: Make it work with ngrams as keys rather than documents
     def relation(self, concordance1, concordance2):
         if not isinstance(concordance1, dict) or not isinstance(concordance2, dict):
             raise ValueError('Supplied arguments should be of type dict')
