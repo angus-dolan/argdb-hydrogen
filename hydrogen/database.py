@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
-from config import Config
+from hydrogen import Config
 
 config = Config()
 database_name = config.get('datastore', 'name')

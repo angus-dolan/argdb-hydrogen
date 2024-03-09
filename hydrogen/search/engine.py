@@ -1,5 +1,5 @@
-from parser import SearchParser
-from index import SearchIndex
+from .parser import SearchParser
+from .index import SearchIndex
 from collections import Counter
 
 

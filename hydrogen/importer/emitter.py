@@ -1,4 +1,4 @@
-from database import Database, Arguments
+from hydrogen import Database, Arguments
 import json
 
 db = Database()

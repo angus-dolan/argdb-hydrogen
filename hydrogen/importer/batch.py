@@ -1,6 +1,7 @@
 from .lexer import ArgsmeLexer
 from .parser import ArgsmeParser
 from .emitter import Emitter
+from hydrogen.search import SearchEngine
 from collections import deque
 from abc import ABC, abstractmethod
 import logging
@@ -68,9 +69,9 @@ class ArgsmeBatchImporter(BaseImporter):
                 lexer = ArgsmeLexer(json_data=argument)
                 lexer.tokenize()
                 tokens = lexer.get_lexed_tokens()
-
                 parser = ArgsmeParser(batch=self, lexed_tokens=tokens)
                 sadface = parser.parse()
+
                 self.completed[sadface.get_id()] = sadface.document
 
             except Exception as e:
