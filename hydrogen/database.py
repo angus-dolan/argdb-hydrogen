@@ -1,9 +1,9 @@
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
-from config import Config
+from hydrogen import Config
 
 config = Config()
 database_name = config.get('datastore', 'name')
@@ -12,12 +12,34 @@ engine = create_engine(database_url, echo=True)
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
+'''
+    Databases and Tables:
 
-class Raw(Base):
-    __tablename__ = 'raw'
+    argdb.sqlite: A SQLite database designed to manage argument data and import operations.
+    - `arguments`: Contains the full argument records.
+    - `importer_failed`: Logs arguments where the import process encountered errors.
+    - `importer_lq`: Arguments that are greater than 210 characters are deemed low quality, thus not search indexed.
+'''
+
+# TODO: Implement importer_failed and importer_lq persistence in importer
+
+class ArgumentModel(Base):
+    __tablename__ = 'arguments'
     id = Column(Integer, primary_key=True)
     uuid = Column(String, unique=True)
     data = Column(String)
+
+
+class ImporterFailedModel(Base):
+    __tablename__ = 'importer_failed'
+    id = Column(Integer, primary_key=True)
+    error_detail = Column(Text)
+
+
+class ImporterLqModel(Base):
+    __tablename__ = 'importer_lq'
+    id = Column(Integer, primary_key=True)
+    argument_id = Column(Integer)
 
 
 class BaseRepository(ABC):
@@ -55,9 +77,9 @@ class BaseRepository(ABC):
             raise e
 
 
-class RawRepository(BaseRepository):
+class ArgumentsRepository(BaseRepository):
     def __init__(self, session):
-        super().__init__(session, Raw)
+        super().__init__(session, ArgumentModel)
 
     def add(self, **kwargs):
         payload = kwargs['payload']
@@ -88,10 +110,76 @@ class RawRepository(BaseRepository):
                 self.session.delete(item)
 
 
+class ImporterFailedRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, ImporterFailedModel)
+
+    def add(self, **kwargs):
+        payload = kwargs['payload']
+        with self.managed_transaction():
+            self.session.add(payload)
+
+    def get(self, **kwargs):
+        id = kwargs['id']
+        return self.session.query(self.model).filter_by(id=id).one_or_none()
+
+    def get_all(self):
+        return self.session.query(self.model).all()
+
+    def update(self, **kwargs):
+        id, payload = kwargs['id'], kwargs['payload']
+        with self.managed_transaction():
+            item = self.get(id=id)
+            if item:
+                item.error_detail = payload['error_detail']
+                self.session.add(item)
+
+    def delete(self, **kwargs):
+        id = kwargs['id']
+        with self.managed_transaction():
+            item = self.get(id=id)
+            if item:
+                self.session.delete(item)
+
+
+class ImporterLqRepository(BaseRepository):
+    def __init__(self, session):
+        super().__init__(session, ImporterLqModel)
+
+    def add(self, **kwargs):
+        payload = kwargs['payload']
+        with self.managed_transaction():
+            self.session.add(payload)
+
+    def get(self, **kwargs):
+        id = kwargs['id']
+        return self.session.query(self.model).filter_by(id=id).one_or_none()
+
+    def get_all(self):
+        return self.session.query(self.model).all()
+
+    def update(self, **kwargs):
+        id, payload = kwargs['id'], kwargs['payload']
+        with self.managed_transaction():
+            item = self.get(id=id)
+            if item:
+                item.argument_id = payload['argument_id']
+                self.session.add(item)
+
+    def delete(self, **kwargs):
+        id = kwargs['id']
+        with self.managed_transaction():
+            item = self.get(id=id)
+            if item:
+                self.session.delete(item)
+
+
 class Database:
     def __init__(self):
         self.session = Session()
-        self.raw = RawRepository(self.session)
+        self.arguments = ArgumentsRepository(self.session)
+        self.importer_failed = ImporterFailedRepository(self.session)
+        self.importer_lq = ImporterLqRepository(self.session)
 
     def initialize(self):
         Base.metadata.create_all(bind=engine)

@@ -487,3 +487,43 @@ Next:
 - Build a dockerized API service
 - Search method performance improvements, see line 35 of `engine.py` in this PR
 - Connect importer to search engine, I want to follow IBM research and mark arguments > 210 characters as low quality, maybe not even index them. Would make a good discussion point about argsme dataset in write up.
+
+### Sat 9th March
+- Connected search engine prototype to importer.
+- Indexed all 58k arguments.
+- Took the approach of having each sadface id as the redis key
+- e.g. `"search_index:c67482ba-2019-04-18T13:32:05Z"`
+- with each sadface doc id key having many indexed texts
+- N-Grams way too big.
+- This is already a naive and CPU intensive implimentation, but N=2 generates way too many terms and causes insane results pollution.
+- Takes 145 seconds to return a simple search query.
+- And it has 32k results (search pollution did not fix itself).
+- This is with n grams size set to 2.
+- Going to experiment with larger n grams and see if it improves the speed. 
+- If not look at the bigger picture (maybe ditch vector index).
+
+```shell
+query = "Something about high school"
+Number of results: 327517
+```
+
+```shell
+  _     ._   __/__   _ _  _  _ _/_   Recorded: 19:56:07  Samples:  107963
+ /_//_/// /_\ / //_// / //_'/ //     Duration: 145.463   CPU time: 61.677
+/   _/                      v4.6.2
+
+145.461 profile_search_engine  engine.py:44
+└─ 145.350 main  engine.py:33
+   └─ 144.457 SearchEngine.search  engine.py:26
+      └─ 144.457 SearchIndex.get_matches  index.py:18
+         ├─ 106.995 Redis.smembers  redis/commands/core.py:3394
+         │     [17 frames hidden]  redis, <built-in>
+         │        79.238 socket.recv  <built-in>
+         ├─ 21.117 loads  json/__init__.py:299
+         │     [3 frames hidden]  json
+         └─ 14.900 SearchIndex.relation  index.py:49
+            └─ 14.020 SearchIndex.magnitude  index.py:38
+               └─ 13.906 [self]  index.py
+
+```
+

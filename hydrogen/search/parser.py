@@ -1,6 +1,6 @@
-from language.english.stopwords import stopwords_list
-from language.english.punctuation import punctuation_list
+from hydrogen.search.language import punctuation_list, stopwords_list
 import re
+
 
 class SearchParser:
     def __init__(self):

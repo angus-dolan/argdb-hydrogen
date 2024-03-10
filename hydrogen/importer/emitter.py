@@ -1,8 +1,8 @@
-from database import Database, Raw
+from hydrogen import Database, ArgumentModel
+from hydrogen.search import SearchEngine
 import json
 
-db = Database()
-
+db, search_engine = Database(), SearchEngine()
 
 class Emitter:
     def __init__(self, uuid=None, doc=None):
@@ -16,11 +16,14 @@ class Emitter:
         self.document = doc
 
     def emit(self):
-        exists = db.raw.get(uuid=self.uuid)
-        payload = json.dumps(self.document)
-
-        if exists:
-            return db.raw.update(uuid=self.uuid, payload=payload)
-
-        new_doc = Raw(uuid=self.uuid, data=payload)
-        return db.raw.add(payload=new_doc)
+        # exists = db.arguments.get(uuid=self.uuid)
+        # db_payload = json.dumps(self.document)
+        #
+        # if exists:
+        #     db.arguments.update(uuid=self.uuid, payload=db_payload)
+        #     # TODO: Update an existing search index
+        #     return
+        #
+        # new_record = ArgumentModel(uuid=self.uuid, data=db_payload)
+        # db.arguments.add(payload=new_record)
+        search_engine.add_document(self.uuid, self.document)

@@ -68,7 +68,6 @@ class ArgsmeBatchImporter(BaseImporter):
                 lexer = ArgsmeLexer(json_data=argument)
                 lexer.tokenize()
                 tokens = lexer.get_lexed_tokens()
-
                 parser = ArgsmeParser(batch=self, lexed_tokens=tokens)
                 sadface = parser.parse()
                 self.completed[sadface.get_id()] = sadface.document
@@ -109,9 +108,11 @@ class ArgsmeBatchImporter(BaseImporter):
         except Exception as e:
             self.abort(f"Failed to load batches: {e}")
 
-        # Emmit completed batch to db
+        # Emmit to datastore and search engine
         completed = self.get_completed_arguments()
         for id, argument in completed.items():
             self.emitter.set_uuid(id)
             self.emitter.set_document(argument)
             self.emitter.emit()
+
+
