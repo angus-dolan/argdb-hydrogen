@@ -3,3 +3,6 @@ ijson==3.2.3
 sadface==0.5.3.1
 pytest==8.0.1
 redis==5.0.2
+pyinstrument~=4.6.2
+nltk~=3.8.1
+setuptools~=68.2.0
