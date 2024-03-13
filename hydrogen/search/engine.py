@@ -1,66 +1,120 @@
-from hydrogen.search.parser import SearchParser
-from hydrogen.search.index import SearchIndex
-from collections import Counter
-from pyinstrument import Profiler
-from nltk.util import ngrams
+import json
+from pprint import pprint
+import os
+import time
+
+from dotenv import load_dotenv
+from elasticsearch import Elasticsearch
+from sentence_transformers import SentenceTransformer
+from hydrogen.config import Config
+
+load_dotenv()
+config = Config()
+index_name = config.get('search_index', 'index_name')
+index_port = config.get('search_index', 'port')
 
 
-class SearchEngine:
+
+# Vector search
+class Search:
     def __init__(self):
-        self.search_parser = SearchParser()
-        self.index = SearchIndex()
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.es = Elasticsearch('http://localhost:' + index_port)
+        client_info = self.es.info()
+        print('Connected to Elasticsearch!')
+        pprint(client_info.body)
 
-    # def generate_concordance(self, parsed_text):
-    #     concordance = Counter()
-    #     for token in parsed_text:
-    #         edge_ngrams = self.index.generate_edge_ngrams(token)
-    #         concordance.update(edge_ngrams)
-    #     return concordance
+    def search(self, **query_args):
+        return self.es.search(index=index_name, **query_args)
 
-    def generate_edge_ngrams(self, text, max_length=3):
-        edge_ngrams = []
-        for word in text.split():
-            for end in range(1, min(len(word), max_length) + 1):
-                edge_ngrams.append(word[:end])
-        return edge_ngrams
+    def create_index(self):
+        self.es.indices.delete(index=index_name, ignore_unavailable=True)
+        self.es.indices.create(index=index_name)
 
-    def add_document(self, doc_id, sadface_doc):
-        nodes = sadface_doc.get('nodes')
+    def reindex(self):
+        self.create_index()
+        with open('data.json', 'rt') as f:
+            documents = json.loads(f.read())
+        return self.insert_documents(documents)
 
-        for node in nodes:
-            parsed_text = self.search_parser.parse(node.get('text'))
-            edge_ngrams = self.generate_edge_ngrams(' '.join(parsed_text))
-            n = self.generate_edge_ngrams("mens mental health")
-            print()
+    def retrieve_document(self, id):
+        return self.es.get(index=index_name, id=id)
 
-    def search(self, query):
-        parsed_query = self.search_parser.parse(query)
-        query_concordance = self.generate_concordance(parsed_query)
+    def get_embedding(self, text):
+        return self.model.encode(text)
 
-        return self.index.get_matches(query_concordance)
+    def insert_document(self, document):
+        parsed = self.transform_sadface(document)
+        return self.es.index(index=index_name, document={
+            **parsed,
+            'embedding': self.get_embedding(parsed['summary']),
+        })
 
+    def transform_sadface(self, document):
+        core_info = document['metadata']['core']
+        output = {
+            "id": core_info['id'],
+            "created": core_info['created'],
+            "edited": core_info['edited'],
+            "analyst_name": core_info.get('analyst_name', ''),
+            "analyst_email": core_info.get('analyst_email', ''),
+            "version": core_info['version'],
+            "title": core_info['title'],
+            "nodes": document['nodes'],
+            "edges": document['edges']
+        }
+        # Combine all node text into a summary
+        summary = ' '.join(node['text'] for node in document['nodes'])
+        output['summary'] = summary
+        return output
 
-def main():
-    var = {
-        "nodes": [
-            {"id": "665a55a3-2019-04-19T12:46:15Z-00004-000", "metadata": {"stance": "PRO"},
-             "text": "Physically fit people have better mental health and do better at academia", "type": "atom"},
-        ]
-    }
+    def insert_documents(self, documents):
+        operations = []
+        for document in documents:
+            operations.append({'index': {'_index': index_name}})
+            operations.append({
+                **document,
+                'embedding': self.get_embedding(document['summary']),
+            })
+        return self.es.bulk(operations=operations)
 
-    engine = SearchEngine()
-    engine.add_document("665a55a3-2019-04-19T12:46:15Z", var)
+    def delete_index(self):
+        if self.es.indices.exists(index=index_name):
+            response = self.es.indices.delete(index=index_name)
+            print("Index deleted:", response)
+        else:
+            print("Index does not exist.")
 
-
-def profile_search_engine():
-    profiler = Profiler()
-    profiler.start()
-
-    main()
-
-    profiler.stop()
-    print(profiler.output_text(unicode=True, color=True))
-
-
-if __name__ == "__main__":
-    profile_search_engine()
+# Full text search
+# class Search:
+#     def __init__(self):
+#         self.es = Elasticsearch('http://localhost:9200')
+#         client_info = self.es.info()
+#         print('Connected to Elasticsearch!')
+#         pprint(client_info.body)
+#
+#     def search(self, **query_args):
+#         return self.es.search(index=index_name, **query_args)
+#
+#     def create_index(self):
+#         self.es.indices.delete(index=index_name, ignore_unavailable=True)
+#         self.es.indices.create(index=index_name)
+#
+#     def reindex(self):
+#         self.create_index()
+#         with open('data.json', 'rt') as f:
+#             documents = json.loads(f.read())
+#         return self.insert_documents(documents)
+#
+#     def insert_document(self, document):
+#         return self.es.index(index=index_name, body=document)
+#
+#     def insert_documents(self, documents):
+#         operations = []
+#         for document in documents:
+#             operations.append({'index': {'_index': index_name}})
+#             operations.append(document)
+#         return self.es.bulk(operations=operations)
+#
+#     def retrieve_document(self, id):
+#         return self.es.get(index=index_name, id=id)

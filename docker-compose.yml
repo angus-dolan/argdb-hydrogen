@@ -2,7 +2,7 @@ version: '3.7'
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: elasticsearch
+    container_name: hydrogen_elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
