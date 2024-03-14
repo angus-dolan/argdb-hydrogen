@@ -36,4 +36,6 @@ wheel==0.41.3
     # via pip-tools
 elasticsearch~=8.12.1
 sentence-transformers==2.5.1
+redis==5.0.2
+flask-cors==4.0.0
 setuptools~=68.2.0

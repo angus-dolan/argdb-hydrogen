@@ -1,6 +1,12 @@
 # VSCode Settings
 .vscode/
 
+# P12
+*.p12
+
+# elastic search .crt
+*.crt
+
 # Example data
 hydrogen/importer/example_data/*.json
 

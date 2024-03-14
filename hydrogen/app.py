@@ -1,27 +1,38 @@
 import re
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, Blueprint
+from flask_cors import CORS, cross_origin
 from hydrogen.search import Search
+from hydrogen import Config
 
 app = Flask(__name__)
 es = Search()
+config = Config()
+
+CORS(app, resources={r'/*': {'origins': 'http://localhost:3000'}})
+api_v1 = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
 
-# Hybrid using full-text and vector ranked with RRF
-@app.post('/')
+@api_v1.route('/count_docs', methods=['GET'])
+def count_docs():
+    try:
+        doc_count = es.count_docs()
+        return jsonify({'count': doc_count}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_v1.post('')
 def handle_search():
-    data = request.get_json()
-    print(data)
-
-    query = data.get('query', '')
-    from_ = data.get('from_', 0)
+    query = request.get_json()['query']
     filters, parsed_query = extract_filters(query)
+    from_ = request.form.get('from_', type=int, default=0)
 
     if parsed_query:
         search_query = {
             'must': {
                 'multi_match': {
                     'query': parsed_query,
-                    'fields': ['name', 'summary', 'content'],
+                    'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
                 }
             }
         }
@@ -39,16 +50,6 @@ def handle_search():
                 **filters
             }
         },
-        knn={
-            'field': 'embedding',
-            'query_vector': es.get_embedding(parsed_query),
-            'k': 10,
-            'num_candidates': 50,
-            **filters,
-        },
-        rank={
-            'rrf': {}
-        },
         aggs={
             'category-agg': {
                 'terms': {
@@ -64,7 +65,7 @@ def handle_search():
             },
         },
         size=5,
-        from_=from_,
+        from_=from_
     )
     aggs = {
         'Category': {
@@ -72,7 +73,7 @@ def handle_search():
             for bucket in results['aggregations']['category-agg']['buckets']
         },
         'Year': {
-            bucket['key_as_string']: bucket['doc_count']
+            bucket['key']: bucket['doc_count']
             for bucket in results['aggregations']['year-agg']['buckets']
             if bucket['doc_count'] > 0
         },
@@ -87,142 +88,21 @@ def handle_search():
     })
 
 
-# Vector KNN with filters and facets
-# @app.post('/')
-# def handle_search():
-#     query = request.form.get('query', '')
-#     filters, parsed_query = extract_filters(query)
-#     from_ = request.form.get('from_', type=int, default=0)
-#
-#     results = es.search(
-#         knn={
-#             'field': 'embedding',
-#             'query_vector': es.get_embedding(parsed_query),
-#             'k': 10,
-#             'num_candidates': 50,
-#             **filters,
-#         },
-#         aggs={
-#             'category-agg': {
-#                 'terms': {
-#                     'field': 'category.keyword',
-#                 }
-#             },
-#             'year-agg': {
-#                 'date_histogram': {
-#                     'field': 'updated_at',
-#                     'calendar_interval': 'year',
-#                     'format': 'yyyy',
-#                 },
-#             },
-#         },
-#         size=5,
-#         from_=from_
-#     )
-#     aggs = {
-#         'Category': {
-#             bucket['key']: bucket['doc_count']
-#             for bucket in results['aggregations']['category-agg']['buckets']
-#         },
-#         'Year': {
-#             bucket['key_as_string']: bucket['doc_count']
-#             for bucket in results['aggregations']['year-agg']['buckets']
-#             if bucket['doc_count'] > 0
-#         },
-#     }
-#     return render_template('index.html', results=results['hits']['hits'],
-#                            query=query, from_=from_,
-#                            total=results['hits']['total']['value'], aggs=aggs)
-
-
-# Full text with filters and facets
-# @app.post('/')
-# def handle_search():
-#     query = request.form.get('query', '')
-#     filters, parsed_query = extract_filters(query)
-#     from_ = request.form.get('from_', type=int, default=0)
-#
-#     if parsed_query:
-#         search_query = {
-#             'must': {
-#                 'multi_match': {
-#                     'query': parsed_query,
-#                     'fields': ['name', 'summary', 'content'],
-#                 }
-#             }
-#         }
-#     else:
-#         search_query = {
-#             'must': {
-#                 'match_all': {}
-#             }
-#         }
-#
-#     results = es.search(
-#         query={
-#             'bool': {
-#                 **search_query,
-#                 **filters
-#             }
-#         },
-#         aggs={
-#             'category-agg': {
-#                 'terms': {
-#                     'field': 'category.keyword',
-#                 }
-#             },
-#             'year-agg': {
-#                 'date_histogram': {
-#                     'field': 'updated_at',
-#                     'calendar_interval': 'year',
-#                     'format': 'yyyy',
-#                 },
-#             },
-#         },
-#         size=5,
-#         from_=from_
-#     )
-#     aggs = {
-#         'Category': {
-#             bucket['key']: bucket['doc_count']
-#             for bucket in results['aggregations']['category-agg']['buckets']
-#         },
-#         'Year': {
-#             bucket['key']: bucket['doc_count']
-#             for bucket in results['aggregations']['year-agg']['buckets']
-#             if bucket['doc_count'] > 0
-#         },
-#     }
-#     return render_template('index.html', results=results['hits']['hits'],
-#                            query=query, from_=from_,
-#                            total=results['hits']['total']['value'],
-#                            aggs=aggs)
-
-
-@app.get('/document/<id>')
+@api_v1.get('/document/<id>')
 def get_document(id):
     document = es.retrieve_document(id)
+
     if not document:
         return jsonify({'error': 'Document not found'}), 404
 
-    title = document['_source']['title']
-    nodes = document['_source']['nodes']
-    edges = document['_source']['edges']
-
-    return jsonify({
-        'id': id,
-        'title': title,
-        'nodes': nodes,
-        'edges': edges
-    })
+    return jsonify(document['_source'])
 
 
 @app.cli.command()
 def reindex():
     """Regenerate the Elasticsearch index."""
     response = es.reindex()
-    print(f'Index with {len(response["items"])} documents created '
-          f'in {response["took"]} milliseconds.')
+    print("Successfully processed and indexed all batches")
 
 
 @app.cli.command()
@@ -261,3 +141,9 @@ def extract_filters(query):
         query = re.sub(filter_regex, '', query).strip()
 
     return {'filter': filters}, query
+
+
+app.register_blueprint(api_v1)
+
+if __name__ == "__main__":
+    app.run(port=config.get('api', 'port'), debug=True)
