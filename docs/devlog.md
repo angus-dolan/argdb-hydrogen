@@ -527,3 +527,21 @@ Number of results: 327517
 
 ```
 
+# Tue 12th Mar
+- Started building a frontend
+- Debated between simple templating and a reactive frontend framework
+- Decided on nuxt
+- Decided I need to ditch sqlite for storing the arguments
+- Can use sqlite for basic (in between) data storage
+
+# Wed 13th Mar
+- Want to make emitter an interface to chose between elastic and sqlite in future
+- 1-1 indexing is too slow with elastic
+  - Needs refactoring to use bulk api
+- File system emitter was problematic due to read/write permissions
+- Used redis
+- Still had a lot of issues
+- 100mb limit on elastic search required new batch system
+- creating a vector embedding with naive solution was too slow and crashed
+- Switched to focus on tackling full text first
+- added kibana service to view data easier

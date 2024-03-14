@@ -1,6 +1,6 @@
 from .lexer import ArgsmeLexer
 from .parser import ArgsmeParser
-from .emitter import Emitter
+from .emitter import RedisEmitter
 from collections import deque
 from abc import ABC, abstractmethod
 import logging
@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 class BaseImporter(ABC):
     def __init__(self, file_path):
         self.file_path = file_path
-        self.emitter = Emitter()
 
     def get_file_path(self):
         return self.file_path
@@ -108,11 +107,9 @@ class ArgsmeBatchImporter(BaseImporter):
         except Exception as e:
             self.abort(f"Failed to load batches: {e}")
 
-        # Emmit to datastore and search engine
         completed = self.get_completed_arguments()
-        for id, argument in completed.items():
-            self.emitter.set_uuid(id)
-            self.emitter.set_document(argument)
-            self.emitter.emit()
 
-
+        # Emmit to redis cache
+        elastic_bulk_limit = 104857600  # 100MB
+        emitter = RedisEmitter(completed, elastic_bulk_limit)
+        emitter.emit()

@@ -17,9 +17,10 @@ class Config:
     def _generate_default_file(self):
         cp = ConfigParser()
         cp['datastore'] = {'name': 'argdb', 'path': '.'}
-        cp['search_index'] = {'port': '6379', 'index_name': 'search_index'}
+        cp['search_index'] = {'port': '9200', 'index_name': 'search_index'}
+        cp['redis'] = {'host': 'localhost', 'port': '6379', 'db': '0'}
         cp['frontend'] = {'port': '3000'}
-        cp['api'] = {'port': '5000'}
+        cp['api'] = {'port': '8000'}
 
         with open(self.config_path, 'w') as config_file:
             cp.write(config_file)
