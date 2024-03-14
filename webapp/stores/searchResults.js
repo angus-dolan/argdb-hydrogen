@@ -8,7 +8,7 @@ export const useSearchResultsStore = defineStore('searchResults', {
     elapsedTime: ref(null)
   }),
   actions: {
-    setResults(data: any) {
+    setResults(data) {
       console.log('setting results')
       this.data = data;
       console.log(this.data.results[0])
@@ -16,10 +16,10 @@ export const useSearchResultsStore = defineStore('searchResults', {
         this.selected = this.data.results[0];
       }
     },
-    setElapsedTime(time: any) {
+    setElapsedTime(time) {
       this.elapsedTime = time;
     },
-    setSelected(argument: any) {
+    setSelected(argument) {
       console.log('set selected')
       this.selected = argument
     }

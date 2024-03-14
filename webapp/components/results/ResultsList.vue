@@ -1,7 +1,7 @@
 <script setup>
 import {cn} from "@/lib/utils.ts";
 import {formatDistanceToNow} from "date-fns";
-import {useSearchResultsStore} from "@/stores/searchResults.ts";
+import {useSearchResultsStore} from "@/stores/searchResults";
 
 const searchResultsStore = useSearchResultsStore();
 const data = computed(() => searchResultsStore.data);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {useSearchResultsStore} from "~/stores/searchResults";
+import {useSearchResultsStore} from "@/stores/searchResults";
 
 const searchResultsStore = useSearchResultsStore();
 const selected = computed(() => searchResultsStore.selected);

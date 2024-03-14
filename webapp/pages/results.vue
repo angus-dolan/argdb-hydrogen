@@ -3,7 +3,7 @@ import SearchBox from "@/components/SearchBox.vue";
 import ResultsList from "@/components/results/ResultsList.vue"
 import ResultsFilters from "@/components/results/ResultsFilters.vue"
 import ResultsItem from "@/components/results/ResultsItem.vue"
-import { useSearchResultsStore } from '@/stores/searchResults';
+import {useSearchResultsStore} from "@/stores/searchResults"
 
 const searchResultsStore = useSearchResultsStore();
 const data = computed(() => searchResultsStore.data);

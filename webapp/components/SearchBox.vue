@@ -2,7 +2,7 @@
 import {Input} from "~/components/ui/input";
 import { MagnifyingGlassIcon } from '@radix-icons/vue'
 import { useToast } from '@/components/ui/toast/use-toast'
-import { useSearchResultsStore } from '@/stores/searchResults.ts';
+import { useSearchResultsStore } from '@/stores/searchResults';
 
 const searchResultsStore = useSearchResultsStore();
 const nuxtConfig = useRuntimeConfig();
