@@ -23,9 +23,10 @@ def count_docs():
 
 @api_v1.post('')
 def handle_search():
-    query = request.get_json()['query']
+    body = request.get_json()
+    query = body.get('query')
     filters, parsed_query = extract_filters(query)
-    from_ = request.form.get('from_', type=int, default=0)
+    from_ = body.get('from_', 0)
 
     if parsed_query:
         search_query = {
