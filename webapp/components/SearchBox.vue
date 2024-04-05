@@ -23,10 +23,11 @@ async function search() {
   }
 
   const { data, pending, error, refresh } = await useFetch('/', {
+    headers: { 'Content-Type': 'application/json' },
     method: 'POST',
     baseURL: nuxtConfig.public.baseURL,
-    body: {query: query.value}
-  })
+    body: JSON.stringify({ query: query.value })
+  });
 
   if (data.value) {
     searchResultsStore.setResults(data.value);

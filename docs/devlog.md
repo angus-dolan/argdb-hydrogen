@@ -545,3 +545,20 @@ Number of results: 327517
 - creating a vector embedding with naive solution was too slow and crashed
 - Switched to focus on tackling full text first
 - added kibana service to view data easier
+
+# Fri 5th April
+- importer/emitter
+  - Refactored redis emitter
+  - Main focus was changing chunk data from string to a set
+  - search/engine/reindex() was messy getting data from redis as string
+  - Emitter is also more readable now
+- api
+  - Moved elastic search logic into new engine
+  - Also cleaned up routes
+- search/engine
+  - Refactored
+  - Uses bridge pattern
+  - Removed filters, aggs etc. for clarity
+  - Full-text back and working but still needs semantic/hybrid
+- frontend
+  - utils was missing from git due to gitignore

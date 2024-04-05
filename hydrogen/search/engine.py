@@ -1,79 +1,150 @@
-import json
-from pprint import pprint
-import redis
-import os
-import time
-
+from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
-from sentence_transformers import SentenceTransformer
 from hydrogen.config import Config
+import redis
+import json
 
 load_dotenv()
 config = Config()
-index_name = config.get('search_index', 'index_name')
-index_port = config.get('search_index', 'port')
-cache_host = config.get('redis', 'host')
-cache_port = config.get('redis', 'port')
-cache_db = config.get('redis', 'db')
+es_index_name = config.get('search_index', 'index_name')
+es_index_port = config.get('search_index', 'port')
+redis_host = config.get('redis', 'host')
+redis_port = config.get('redis', 'port')
+redis_db = config.get('redis', 'db')
 
 
-# Vector search
-class Search:
-    def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.es = Elasticsearch('http://localhost:' + index_port)
-        self.redis_client = redis.Redis(host=cache_host, port=cache_port, db=cache_db)
-        client_info = self.es.info()
-        print('Connected to Elasticsearch!')
-        pprint(client_info.body)
+class SearchImplementor(ABC):
+    @abstractmethod
+    def search(self, **query_args):
+        pass
 
-    def count_docs(self):
-        return self.es.count(index=index_name)['count']
+    @abstractmethod
+    def parse_query(self, query):
+        pass
+
+
+class FullTextSearch(SearchImplementor):
+    def __init__(self, es = None):
+        self.es = es
+
+    def parse_query(self, query):
+        if query:
+            return {
+                'must': {
+                    'multi_match': {
+                        'query': query,
+                        'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
+                    }
+                }
+            }
+        else:
+            return {
+                'must': {
+                    'match_all': {}
+                }
+            }
 
     def search(self, **query_args):
-        return self.es.search(index=index_name, **query_args)
+        return self.es.search(index=es_index_name, **query_args)
+
+
+class SemanticSearch(SearchImplementor):
+    def __init__(self, es = None):
+        self.es = es
+
+    def parse_query(self, query):
+        if query:
+            return {
+                'must': {
+                    'multi_match': {
+                        'query': query,
+                        'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
+                    }
+                }
+            }
+        else:
+            return {
+                'must': {
+                    'match_all': {}
+                }
+            }
+
+    def search(self, **query_args):
+        return self.es.search(index=es_index_name, **query_args)
+
+
+class HybridSearch(SearchImplementor):
+    def __init__(self, es = None):
+        self.es = es
+
+    def parse_query(self, query):
+        if query:
+            return {
+                'must': {
+                    'multi_match': {
+                        'query': query,
+                        'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
+                    }
+                }
+            }
+        else:
+            return {
+                'must': {
+                    'match_all': {}
+                }
+            }
+
+    def search(self, **query_args):
+        return self.es.search(index=es_index_name, **query_args)
+
+
+class SearchEngine:
+    def __init__(self, implementor):
+        self.es = Elasticsearch('http://localhost:' + es_index_port)
+        self.redis = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+        self.implementor = implementor(es=self.es)
+        print('Connected to Elasticsearch!')
+
+    def count_docs(self):
+        return self.es.count(index=es_index_name)['count']
 
     def create_index(self):
-        self.es.indices.delete(index=index_name, ignore_unavailable=True)
-        self.es.indices.create(index=index_name)
+        self.es.indices.delete(index=es_index_name, ignore_unavailable=True)
+        self.es.indices.create(index=es_index_name)
 
     def reindex(self):
         self.create_index()
-        keys = [key.decode('utf-8') for key in self.redis_client.lrange('arguments_list', 0, -1)]
-        for key in keys:
-            print(key)
-            batch_string = self.redis_client.get(key).decode('utf-8')
-            batch_arguments = [json.loads(str_argument) for str_argument in batch_string.split('__NEWARGUMENT__') if str_argument.strip()]
-            self.insert_documents(batch_arguments)
+        chunk_list = [key.decode('utf-8') for key in self.redis.lrange('chunk_list', 0, -1)]
+        for chunk in chunk_list:
+            members = self.redis.smembers(chunk)
+            arguments = [json.loads(member.decode('utf-8')) for member in members]
+            self.insert_documents(arguments)
+            print(f'{chunk} ({len(arguments)} arguments)')
+
+    def delete_index(self):
+        if self.es.indices.exists(index=es_index_name):
+            response = self.es.indices.delete(index=es_index_name)
+            print("Index deleted:", response)
+        else:
+            print("Index does not exist.")
 
     def retrieve_document(self, id):
-        return self.es.get(index=index_name, id=id)
-
-    def get_embedding(self, text):
-        return self.model.encode(text)
-
-    def insert_document(self, document):
-        parsed = self.transform_sadface(document)
-        return self.es.index(index=index_name, document={
-            **parsed,
-            'embedding': self.get_embedding(parsed['summary']),
-        })
+        return self.es.get(index=es_index_name, id=id)
 
     def insert_documents(self, documents):
         operations = []
         for document in documents:
-            parsed = self.transform_sadface(document)
-            operations.append({'index': {'_index': index_name}})
+            schema = self.schema(document)
+            operations.append({'index': {'_index': es_index_name}})
             operations.append({
-                **parsed,
-                # 'embedding': self.get_embedding(parsed['summary']),
+                **schema,
             })
         return self.es.bulk(operations=operations)
 
-    def transform_sadface(self, document):
+    def schema(self, document):
         core_info = document['metadata']['core']
-        output = {
+        return {
             "id": core_info['id'],
             "created": core_info['created'],
             "edited": core_info['edited'],
@@ -84,14 +155,7 @@ class Search:
             "nodes": document['nodes'],
             "edges": document['edges']
         }
-        # Combine all node text into a summary
-        # summary = ' '.join(node['text'] for node in document['nodes'])
-        # output['summary'] = summary
-        return output
 
-    def delete_index(self):
-        if self.es.indices.exists(index=index_name):
-            response = self.es.indices.delete(index=index_name)
-            print("Index deleted:", response)
-        else:
-            print("Index does not exist.")
+    def search(self, raw_query, **query_args):
+        query = self.implementor.parse_query(raw_query)
+        return self.implementor.search(query={'bool': query}, **query_args)
