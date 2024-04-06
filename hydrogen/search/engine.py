@@ -4,14 +4,17 @@ from elasticsearch import Elasticsearch
 from hydrogen.config import Config
 from hydrogen.search.language.punctuation import punctuation_list
 from hydrogen.search.language.stopwords import stopwords_list
+from sentence_transformers import SentenceTransformer
 import redis
 import json
 import time
+import os
 import re
 
 load_dotenv()
 config = Config()
 search_mode = config.get('search', 'mode')
+hybrid_inference = config.get('search', 'hybrid_inference')
 es_index_name = config.get('search', 'index_name')
 es_index_port = config.get('search', 'port')
 redis_host = config.get('redis', 'host')
@@ -41,7 +44,6 @@ class FullTextSearch(SearchImplementor):
                         'must': {
                             'multi_match': {
                                 'query': query,
-
                                 'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
                             }
                         }
@@ -66,6 +68,21 @@ class FullTextSearch(SearchImplementor):
 class HybridSearch(SearchImplementor):
     def __init__(self, es=None):
         self.es = es
+        self.embeddings = self.retrieve_embeddings()
+
+    def retrieve_embeddings(self):
+        file_path = os.path.join(os.getcwd(), 'datasets', 'embeddings_dataset.json')
+
+        if not os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"embeddings dataset is not present in datasets directory")
+
+        embeddings = {}
+        with open(f'{file_path}', 'r') as file:
+            data = json.load(file)
+            for embedding in data:
+                embeddings[embedding['id']] = embedding['embedding']
+        return embeddings
 
     def parse_query(self, query):
         if query:
@@ -93,7 +110,17 @@ class HybridSearch(SearchImplementor):
 
     def create_index(self):
         self.es.indices.delete(index=es_index_name, ignore_unavailable=True)
-        self.es.indices.create(index=es_index_name)
+        self.es.indices.create(index=es_index_name, mappings={
+            'properties': {
+                'embedding': {
+                    'type': 'dense_vector',
+                }
+            }
+        })
+
+    def get_embedding(self, _id):
+        return self.embeddings.get(_id, None)
+
 
 class SemanticSearch(SearchImplementor):
     def __init__(self, es=None):
@@ -192,7 +219,7 @@ class SemanticSearch(SearchImplementor):
 
 class SearchEngine:
     def __init__(self, implementor):
-        self.es = Elasticsearch('http://localhost:' + es_index_port, timeout=600)
+        self.es = Elasticsearch('http://localhost:' + es_index_port, timeout=60)
         self.redis = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
         self.implementor = implementor(es=self.es)
         print('Connected to Elasticsearch!')
@@ -213,6 +240,31 @@ class SearchEngine:
             self.insert_documents(arguments)
             print(f'{chunk} ({len(arguments)} arguments)')
 
+    def generate_summary_dataset(self):
+        chunk_list = [key.decode('utf-8') for key in self.redis.lrange('chunk_list', 0, -1)]
+        summaries = []  # List to hold all summaries
+
+        for chunk in chunk_list:
+            members = self.redis.smembers(chunk)
+            arguments = [json.loads(member.decode('utf-8')) for member in members]
+
+            for argument in arguments:
+                processed = self.schema(argument)
+                summaries.append({
+                    'id': processed.get('id'),
+                    'summary': processed.get('summary')
+                })
+
+        file_path = os.path.join(os.getcwd(), 'datasets', 'summary_dataset.json')
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"Deleted existing file: {file_path}")
+
+        with open(file_path, 'w') as f:
+            json.dump(summaries, f, indent=2)
+            print(f"Saved embeddings dataset to: {file_path}")
+
     def delete_index(self):
         if self.es.indices.exists(index=es_index_name):
             response = self.es.indices.delete(index=es_index_name)
@@ -230,14 +282,19 @@ class SearchEngine:
 
     def insert_documents(self, documents):
         operations = []
+
         for document in documents:
             schema = self.schema(document)
+
+            if search_mode == 'hybrid':
+                schema['embedding'] = self.implementor.get_embedding(schema['id'])
+
             operations.append({'index': {'_index': es_index_name}})
-            operations.append({
-                **schema,
-            })
+            operations.append(schema)
+
         response = self.es.bulk(operations=operations)
         errors = [item for item in response.get('items', []) if 'error' in item.get('index', {})]
+
         if errors:
             print("Some documents didn't index successfully")
         else:

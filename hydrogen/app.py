@@ -84,8 +84,8 @@ def deploy_elser():
 
 
 @app.cli.command()
-def debug():
-    search_engine.debug()
+def generate_summary_dataset():
+    search_engine.generate_summary_dataset()
 
 
 app.register_blueprint(api_v1, urlprefix="/")

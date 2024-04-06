@@ -1,3 +1,6 @@
+# Datasets
+hydrogen/datasets/*.json
+
 # VSCode Settings
 .vscode/
 
@@ -6,9 +9,6 @@
 
 # elastic search .crt
 *.crt
-
-# Example data
-hydrogen/importer/example_data/*.json
 
 # ArgDB configuration file
 *.cfg

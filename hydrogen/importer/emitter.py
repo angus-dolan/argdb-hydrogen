@@ -18,11 +18,15 @@ class IEmitter:
 
 
 class RedisEmitter:
-    def __init__(self, buffer, elastic_bytes_limit=52428800, redis_host=cache_host, redis_port=cache_port, redis_db=cache_db):
+    def __init__(self, buffer, elastic_bytes_limit=31457280, redis_host=cache_host, redis_port=cache_port, redis_db=cache_db):
+        """
+        Elastic's bulk insert limit is 100mb
+        In the engine, both a summary and embedding is added to the batch's payload
+        Therefore batches are set to 30MB to accommodate this
+        e.g. 30MB data payload + ~30MB summary + ~30MB embedding < 100MB
+        """
         self.buffer = buffer
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
-        # elastic's limit is 100MB
-        # I've set it less than 100MB for semantic search ML model inference
         self.max_size_bytes = elastic_bytes_limit
 
     def store_chunk(self, chunk_data, chunk_key):

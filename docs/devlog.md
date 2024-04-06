@@ -586,3 +586,7 @@ Number of results: 327517
     - Going to try cloud inference as a potential workaround
     - esler model is too expensive to run, would need a paid instance (£150 a month)
     - going to try vector again
+    - Uploaded datasets to harvard, built consolidated datasets folder
+    - Used cloud GPU hardware to generate vector embeddings dataset in under 10 mins
+    - Finally found the sweet spot batch size (30MB) to accomidate embeddings and summary, see comment in emitter
+    - Abandoning elser, its cool but too expensive to run, I generated the dataset for around £2 using cloud GPU
