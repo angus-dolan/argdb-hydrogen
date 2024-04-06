@@ -13,8 +13,6 @@ import re
 
 load_dotenv()
 config = Config()
-search_mode = config.get('search', 'mode')
-hybrid_inference = config.get('search', 'hybrid_inference')
 es_index_name = config.get('search', 'index_name')
 es_index_port = config.get('search', 'port')
 redis_host = config.get('redis', 'host')
@@ -295,8 +293,6 @@ class SearchEngine:
             print("Index does not exist.")
 
     def deploy_elser(self):
-        if not search_mode == 'semantic':
-            return
         return self.implementor.deploy()
 
     def retrieve_document(self, id):
@@ -307,10 +303,7 @@ class SearchEngine:
 
         for document in documents:
             schema = self.schema(document)
-
-            if search_mode == 'hybrid':
-                schema['embedding'] = self.implementor.get_dataset_embedding(schema['id'])
-
+            schema['embedding'] = self.implementor.get_dataset_embedding(schema['id'])
             operations.append({'index': {'_index': es_index_name}})
             operations.append(schema)
 

@@ -590,3 +590,9 @@ Number of results: 327517
     - Used cloud GPU hardware to generate vector embeddings dataset in under 10 mins
     - Finally found the sweet spot batch size (30MB) to accomidate embeddings and summary, see comment in emitter
     - Abandoning elser, its cool but too expensive to run, I generated the dataset for around £2 using cloud GPU
+
+- API
+  - Removed search mode from config system
+  - Added Set Mode endpoint
+  - Added Full Text Endpoint
+  - Added Hybrid Endpoint
