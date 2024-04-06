@@ -562,3 +562,25 @@ Number of results: 327517
   - Full-text back and working but still needs semantic/hybrid
 - frontend
   - utils was missing from git due to gitignore
+
+- semantic search
+  - summary system for esler model 
+  - generating summaries broke the 100mb elastic limit that were avoided with redis chunks 
+  - edges were left out as they arent relevant
+  - nodes had to be stemmed to just node text
+
+- semantic search inference
+  - https://www.elastic.co/guide/en/elasticsearch/reference/8.3/start-trained-model-deployment.html
+    - Needed timout
+      - self.es.ingest.put_pipeline(='elser-ingest-pipeline' timeout='60s')
+    - Needed queue capacity of 100k, tried 10k first
+      - self.es.ml.start_trained_model_deployment(model_id=model_id, queue_capacity=10000)
+    - Almost got it working but it needed more threads
+      - self.es.ml.start_trained_model_deployment(model_id=model_id, queue_capacity=10000, threads_per_allocation=4)
+      - 4 was the max available on my hardware/docker container
+    - Had a bug with inference timing out:
+    - https://github.com/elastic/elasticsearch/issues/94490
+    - Upgraded to >=8.11.1 to fix
+    - It works but times out due to hardware limitations when inference on the summary
+    - Added a parser to search engine to reduce data
+    - Going to try cloud inference as a potential workaround

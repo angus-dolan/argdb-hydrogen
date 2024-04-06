@@ -18,10 +18,12 @@ class IEmitter:
 
 
 class RedisEmitter:
-    def __init__(self, buffer, max_size_bytes=104857600, redis_host=cache_host, redis_port=cache_port, redis_db=cache_db):
+    def __init__(self, buffer, elastic_bytes_limit=1048576, redis_host=cache_host, redis_port=cache_port, redis_db=cache_db):
         self.buffer = buffer
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
-        self.max_size_bytes = max_size_bytes  # 100MB
+        # elastic's limit is 100MB
+        # set to 1MB for semantic search ELSER model inference
+        self.max_size_bytes = elastic_bytes_limit
 
     def store_chunk(self, chunk_data, chunk_key):
         """Store the chunk data in Redis as a set and add the chunk key to the list."""

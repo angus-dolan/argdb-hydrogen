@@ -110,8 +110,7 @@ class ArgsmeBatchImporter(BaseImporter):
         completed = self.get_completed_arguments()
 
         # Emmit to redis cache
-        elastic_bulk_limit = 104857600  # 100MB
-        emitter = RedisEmitter(completed, elastic_bulk_limit)
+        emitter = RedisEmitter(completed)
         emitter.emit()
 
         print(f"Completed import process with {len(completed)} arguments imported.")
