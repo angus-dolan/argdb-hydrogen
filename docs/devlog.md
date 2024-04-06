@@ -584,3 +584,5 @@ Number of results: 327517
     - It works but times out due to hardware limitations when inference on the summary
     - Added a parser to search engine to reduce data
     - Going to try cloud inference as a potential workaround
+    - esler model is too expensive to run, would need a paid instance (£150 a month)
+    - going to try vector again

@@ -41,6 +41,7 @@ class FullTextSearch(SearchImplementor):
                         'must': {
                             'multi_match': {
                                 'query': query,
+
                                 'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
                             }
                         }
@@ -62,7 +63,7 @@ class FullTextSearch(SearchImplementor):
         self.es.indices.create(index=es_index_name)
 
 
-class SemanticSearch(SearchImplementor):
+class HybridSearch(SearchImplementor):
     def __init__(self, es=None):
         self.es = es
 
@@ -86,23 +87,36 @@ class SemanticSearch(SearchImplementor):
                     'match_all': {}
                 }
             }
-        # if query:
-        #     return {
-        #         'query': {
-        #             'text_expansion': {
-        #                 'elser_embedding': {
-        #                     'model_id': '.elser_model_2',
-        #                     'model_text': query,
-        #                 }
-        #             }
-        #         }
-        #     }
-        # else:
-        #     return {
-        #         'query': {
-        #             'match_all': {}
-        #         }
-        #     }
+
+    def search(self, **query_args):
+        return self.es.search(index=es_index_name, body=query_args)
+
+    def create_index(self):
+        self.es.indices.delete(index=es_index_name, ignore_unavailable=True)
+        self.es.indices.create(index=es_index_name)
+
+class SemanticSearch(SearchImplementor):
+    def __init__(self, es=None):
+        self.es = es
+
+    def parse_query(self, query):
+        if query:
+            return {
+                'query': {
+                    'text_expansion': {
+                        'elser_embedding': {
+                            'model_id': '.elser_model_2',
+                            'model_text': query,
+                        }
+                    }
+                }
+            }
+        else:
+            return {
+                'query': {
+                    'match_all': {}
+                }
+            }
 
     def search(self, **query_args):
         return self.es.search(index=es_index_name, body=query_args)
@@ -182,6 +196,7 @@ class SearchEngine:
         self.redis = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
         self.implementor = implementor(es=self.es)
         print('Connected to Elasticsearch!')
+        print(self.es.info())
 
     def count_docs(self):
         return self.es.count(index=es_index_name)['count']
@@ -213,14 +228,6 @@ class SearchEngine:
     def retrieve_document(self, id):
         return self.es.get(index=es_index_name, id=id)
 
-    def debug(self):
-        mappings = self.es.indices.get_mapping(index=es_index_name)
-        print(f'Mappings: {mappings}')
-        print('\n')
-        pipelines = self.es.ingest.get_pipeline()
-        print(pipelines)
-        # print(json.dumps(mappings, indent=2))
-
     def insert_documents(self, documents):
         operations = []
         for document in documents:
@@ -238,10 +245,7 @@ class SearchEngine:
 
     def schema(self, document):
         core_info = document['metadata']['core']
-
-        summary = ''
-        if search_mode == 'semantic':
-            summary = self.generate_summary(document)
+        summary = self.generate_parsed_summary(document)
 
         return {
             "id": core_info['id'],
@@ -256,7 +260,7 @@ class SearchEngine:
             "summary": summary
         }
 
-    def generate_summary(self, document):
+    def generate_parsed_summary(self, document):
         combined_nodes = ', '.join(node['text'] for node in document.get('nodes', []))
         tokens = combined_nodes.split(' ')
 

@@ -17,7 +17,7 @@ class Config:
     def _generate_default_file(self):
         cp = ConfigParser()
         cp['datastore'] = {'name': 'argdb', 'path': '.'}
-        cp['search'] = {'mode': 'semantic', 'port': '9200', 'index_name': 'search_index'}
+        cp['search'] = {'mode': 'hybrid', 'port': '9200', 'index_name': 'search-index'}
         cp['redis'] = {'host': 'localhost', 'port': '6379', 'db': '0'}
         cp['frontend'] = {'port': '3000'}
         cp['api'] = {'port': '8000'}

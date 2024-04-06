@@ -18,11 +18,11 @@ class IEmitter:
 
 
 class RedisEmitter:
-    def __init__(self, buffer, elastic_bytes_limit=1048576, redis_host=cache_host, redis_port=cache_port, redis_db=cache_db):
+    def __init__(self, buffer, elastic_bytes_limit=52428800, redis_host=cache_host, redis_port=cache_port, redis_db=cache_db):
         self.buffer = buffer
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
         # elastic's limit is 100MB
-        # set to 1MB for semantic search ELSER model inference
+        # I've set it less than 100MB for semantic search ML model inference
         self.max_size_bytes = elastic_bytes_limit
 
     def store_chunk(self, chunk_data, chunk_key):

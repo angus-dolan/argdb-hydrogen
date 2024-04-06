@@ -2,7 +2,7 @@ import re
 from http.client import HTTPException
 from flask import Flask, request, jsonify, Blueprint
 from flask_cors import CORS, cross_origin
-from hydrogen.search import SearchEngine, FullTextSearch, SemanticSearch
+from hydrogen.search import SearchEngine, FullTextSearch, SemanticSearch, HybridSearch
 from hydrogen import Config
 
 app = Flask(__name__)
@@ -17,6 +17,8 @@ if search_mode == 'fulltext':
     search_engine = SearchEngine(FullTextSearch)
 elif search_mode == 'semantic':
     search_engine = SearchEngine(SemanticSearch)
+elif search_mode == 'hybrid':
+    search_engine = SearchEngine(HybridSearch)
 
 
 @api_v1.get('/count_docs')
