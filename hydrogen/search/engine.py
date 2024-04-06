@@ -24,11 +24,11 @@ redis_db = config.get('redis', 'db')
 
 class SearchImplementor(ABC):
     @abstractmethod
-    def search(self, **query_args):
+    def search(self, raw_query, **query_args):
         pass
 
     @abstractmethod
-    def parse_query(self, query):
+    def parse_query(self, raw_query):
         pass
 
 
@@ -36,14 +36,14 @@ class FullTextSearch(SearchImplementor):
     def __init__(self, es=None):
         self.es = es
 
-    def parse_query(self, query):
-        if query:
+    def parse_query(self, raw_query):
+        if raw_query:
             return {
                 'query': {
                     'bool': {
                         'must': {
                             'multi_match': {
-                                'query': query,
+                                'query': raw_query,
                                 'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
                             }
                         }
@@ -57,8 +57,9 @@ class FullTextSearch(SearchImplementor):
                 }
             }
 
-    def search(self, **query_args):
-        return self.es.search(index=es_index_name, body=query_args)
+    def search(self, raw_query, **query_args):
+        parsed_query = self.parse_query(raw_query)
+        return self.es.search(index=es_index_name, body=parsed_query)
 
     def create_index(self):
         self.es.indices.delete(index=es_index_name, ignore_unavailable=True)
@@ -68,7 +69,8 @@ class FullTextSearch(SearchImplementor):
 class HybridSearch(SearchImplementor):
     def __init__(self, es=None):
         self.es = es
-        self.embeddings = self.retrieve_embeddings()
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')  # Must be same as embeddings_dataset model
+        self.embeddings_dataset = self.retrieve_embeddings()
 
     def retrieve_embeddings(self):
         file_path = os.path.join(os.getcwd(), 'datasets', 'embeddings_dataset.json')
@@ -84,15 +86,15 @@ class HybridSearch(SearchImplementor):
                 embeddings[embedding['id']] = embedding['embedding']
         return embeddings
 
-    def parse_query(self, query):
-        if query:
+    def parse_query(self, raw_query):
+        if raw_query:
             return {
                 'query': {
                     'bool': {
                         'must': {
                             'multi_match': {
-                                'query': query,
-                                'fields': ['title', 'analyst_name', 'analyst_email', 'version'],
+                                'query': raw_query,
+                                'fields': ['title'],
                             }
                         }
                     }
@@ -105,8 +107,24 @@ class HybridSearch(SearchImplementor):
                 }
             }
 
-    def search(self, **query_args):
-        return self.es.search(index=es_index_name, body=query_args)
+    def search(self, raw_query, **query_args):
+        """
+        Reciprocal Rank Fusion (RRF) Search
+        """
+        parsed_query = self.parse_query(raw_query)
+        return self.es.search(
+            body=parsed_query,
+            index=es_index_name,
+            knn={
+                'field': 'embedding',
+                'query_vector': self.get_embedding(raw_query),
+                'k': 10,
+                'num_candidates': 50,
+            },
+            rank={
+                'rrf': {}
+            },
+        )
 
     def create_index(self):
         self.es.indices.delete(index=es_index_name, ignore_unavailable=True)
@@ -118,22 +136,25 @@ class HybridSearch(SearchImplementor):
             }
         })
 
-    def get_embedding(self, _id):
-        return self.embeddings.get(_id, None)
+    def get_dataset_embedding(self, _id):
+        return self.embeddings_dataset.get(_id, None)
+
+    def get_embedding(self, text):
+        return self.model.encode(text)
 
 
 class SemanticSearch(SearchImplementor):
     def __init__(self, es=None):
         self.es = es
 
-    def parse_query(self, query):
-        if query:
+    def parse_query(self, raw_query):
+        if raw_query:
             return {
                 'query': {
                     'text_expansion': {
                         'elser_embedding': {
                             'model_id': '.elser_model_2',
-                            'model_text': query,
+                            'model_text': raw_query,
                         }
                     }
                 }
@@ -145,8 +166,9 @@ class SemanticSearch(SearchImplementor):
                 }
             }
 
-    def search(self, **query_args):
-        return self.es.search(index=es_index_name, body=query_args)
+    def search(self, raw_query, **query_args):
+        parsed_query = self.parse_query(raw_query)
+        return self.es.search(index=es_index_name, body=parsed_query)
 
     def create_index(self):
         self.es.indices.delete(index=es_index_name, ignore=[404])
@@ -287,7 +309,7 @@ class SearchEngine:
             schema = self.schema(document)
 
             if search_mode == 'hybrid':
-                schema['embedding'] = self.implementor.get_embedding(schema['id'])
+                schema['embedding'] = self.implementor.get_dataset_embedding(schema['id'])
 
             operations.append({'index': {'_index': es_index_name}})
             operations.append(schema)
@@ -340,5 +362,4 @@ class SearchEngine:
         return summary
 
     def search(self, raw_query, **query_args):
-        parsed_query = self.implementor.parse_query(raw_query)
-        return self.implementor.search(**parsed_query, **query_args)
+        return self.implementor.search(raw_query, **query_args)
