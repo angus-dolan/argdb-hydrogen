@@ -16,7 +16,7 @@ const data = computed(() => searchResultsStore.data);
       <SearchMode />
       <ResultsFilters class="pt-20"/>
     </div>
-    <div class="col-span-5 px-8 flex flex-col gap-2 border-r">
+    <div class="col-span-5 pb-8 px-8 flex flex-col gap-2 border-r">
       <div class="py-3">
         <SearchBox shadow="shadow-xl"/>
       </div>
