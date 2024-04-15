@@ -5,13 +5,18 @@ export const useSearchResultsStore = defineStore('searchResults', {
     data: null,
     query: ref(null),
     selected: ref(null),
-    elapsedTime: ref(null)
+    elapsedTime: ref(null),
+    searchMode: ref('hybrid')
   }),
   actions: {
+    setModeFulltext() {
+      this.searchMode = 'fulltext';
+    },
+    setModeHybrid() {
+      this.searchMode = 'hybrid';
+    },
     setResults(data) {
-      console.log('setting results')
       this.data = data;
-      console.log(this.data.results[0])
       if (this.data.results.length > 0) {
         this.selected = this.data.results[0];
       }
@@ -20,7 +25,6 @@ export const useSearchResultsStore = defineStore('searchResults', {
       this.elapsedTime = time;
     },
     setSelected(argument) {
-      console.log('set selected')
       this.selected = argument
     }
   },
