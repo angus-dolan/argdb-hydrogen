@@ -219,8 +219,6 @@ class SemanticSearch(SearchImplementor):
         # Define a pipeline
         self.es.ingest.put_pipeline(
             id='elser-ingest-pipeline',
-            error_trace=True,
-            # timeout='60s',
             processors=[
                 {
                     'inference': {
@@ -242,8 +240,6 @@ class SearchEngine:
         self.es = Elasticsearch('http://localhost:' + es_index_port, timeout=60)
         self.redis = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
         self.implementor = implementor(es=self.es)
-        print('Connected to Elasticsearch!')
-        print(self.es.info())
 
     def count_docs(self):
         return self.es.count(index=es_index_name)['count']

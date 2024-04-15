@@ -1,9 +1,9 @@
 ### Datasets
 
-The datasets can be downloaded [here]() and should be placed in this directory.
+The datasets can be downloaded [here](https://doi.org/10.7910/DVN/URJUYP) and should be placed in this directory.
 
 - argsme_corpus.json
-  - Open source dataset of 387,692 arguments that are compiled down to 59,637k by the importer.
+  - Open source dataset of 387,692 arguments that is compiled down to 59,637 sadface arguments by the importer.
   - Used to populate search engine.
 - summary_dataset.json
   - Summaries of each SADFAce argument compiled by the importer

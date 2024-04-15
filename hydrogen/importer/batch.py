@@ -113,4 +113,4 @@ class ArgsmeBatchImporter(BaseImporter):
         emitter = RedisEmitter(completed)
         emitter.emit()
 
-        print(f"Completed import process with {len(completed)} arguments imported.")
+        print(f"Completed import process of {len(completed)} arguments ✅")
