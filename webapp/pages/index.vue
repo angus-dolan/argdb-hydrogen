@@ -5,7 +5,7 @@
     </div>
     <div class="flex justify-between h-12 px-8">
       <SearchMode/>
-      <nav class="space-x-8">
+      <nav class="space-x-8 hidden">
         <NuxtLink to="/settings" class="inline-flex items-center space-x-2 transition-colors hover:text-foreground/80 text-foreground/60">
           <GearIcon/>
           <span>Settings</span>
