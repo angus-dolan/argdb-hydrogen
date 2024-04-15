@@ -13,17 +13,9 @@ const minArgs = ref(0)
           <RadioGroupItem id="r1" value="2019" />
           <Label for="r1">2019</Label>
         </div>
-        <div class="flex items-center space-x-2">
-          <RadioGroupItem id="r2" value="2018" />
-          <Label for="r2">2018</Label>
-        </div>
-        <div class="flex items-center space-x-2">
-          <RadioGroupItem id="r3" value="2017" />
-          <Label for="r3">2017</Label>
-        </div>
       </RadioGroup>
     </div>
-    <div class="p-4 space-y-4 border rounded bg-accent text-sm">
+    <div class="p-4 space-y-4 border rounded bg-accent text-sm hidden">
       <h5 class="font-semibold">Min Arguments</h5>
       <Slider
         v-bind="minArgs"
