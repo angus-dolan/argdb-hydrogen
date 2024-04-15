@@ -16,9 +16,13 @@ import { Progress } from '@/components/ui/progress'
 
 const nuxtConfig = useRuntimeConfig();
 const searchResultsStore = useSearchResultsStore();
-const selectedSearchMode = ref(searchResultsStore.searchMode);
 const loading = ref(false);
 const progress = ref(0);
+const selectedSearchMode = ref(searchResultsStore.searchMode);
+
+watch(() => searchResultsStore.searchMode, (newVal) => {
+  selectedSearchMode.value = newVal;
+});
 
 async function updateAPI() {
   loading.value = true;
@@ -53,6 +57,22 @@ watch(selectedSearchMode, async (newMode, oldMode) => {
   if (newMode === oldMode) return;
   await updateAPI();
 });
+
+async function initSearchMode() {
+      const { data, pending, error, refresh } = await useFetch('/', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'GET',
+      baseURL: `${nuxtConfig.public.baseURL}/search_mode`,
+    });
+    return data.value
+}
+
+const mode = await initSearchMode()
+if (mode == 'fulltext') {
+  searchResultsStore.setModeFulltext()
+} else if (mode == 'hybrid') {
+  searchResultsStore.setModeHybrid()
+}
 </script>
 
 <template>
@@ -77,7 +97,7 @@ watch(selectedSearchMode, async (newMode, oldMode) => {
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
-    <div v-if="loading" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+    <div v-if="loading" class="z-50 fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
       <Progress v-model="progress" class="w-3/5" />
     </div>
   </div>

@@ -25,7 +25,7 @@ async function search() {
   const { data, pending, error, refresh } = await useFetch('/', {
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
-    baseURL: `${nuxtConfig.public.baseURL}/search/hybrid`,
+    baseURL: `${nuxtConfig.public.baseURL}/search/${searchResultsStore.searchMode}`,
     body: JSON.stringify({ query: query.value })
   });
 

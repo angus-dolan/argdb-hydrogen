@@ -6,7 +6,7 @@ export const useSearchResultsStore = defineStore('searchResults', {
     query: ref(null),
     selected: ref(null),
     elapsedTime: ref(null),
-    searchMode: ref('hybrid')
+    searchMode: null,
   }),
   actions: {
     setModeFulltext() {
